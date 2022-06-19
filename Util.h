@@ -4,6 +4,14 @@
 #include <string>
 #include <exception>
 
+#include "Types.h"
+
+#ifdef DEBUG
+#define DBG(c) c
+#else
+#define DBG(c) void
+#endif
+
 std::string readFile(const std::string &fileName);
 
 void loggingCallback(GLenum source​, GLenum type​, GLuint id​, GLenum severity​, GLsizei length​, const GLchar* message​, const void* userParam​);

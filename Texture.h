@@ -6,6 +6,9 @@
 class Texture {
 public:
 	Texture(const std::string &texFilePath);
+	~Texture();
+	void bind();
 private:
 	GLuint m_texId;
+	//GLuint m_dummyId;
 };
