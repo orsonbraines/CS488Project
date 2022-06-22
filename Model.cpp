@@ -4,18 +4,63 @@
 #include <sstream>
 #include <map>
 #include <cassert>
+#include <glm/ext.hpp>
 
 #include "Model.h"
+#include "Util.h"
 
-Model::Model(const std::string& fileName) {
+static std::map<std::string, Material> loadMaterials(const std::string& mtlFile) {
+	std::map<std::string, Material> mats;
+
+	std::string curMat = "";
+	std::ifstream in(mtlFile);
+	if (!in) {
+		throw GraphicsException("Unable to open: " + mtlFile);
+	}
+	std::string line;
+	while (std::getline(in, line)) {
+		std::istringstream lineIn(line);
+		std::string type;
+		lineIn >> type;
+		if (type == "newmtl") {
+			lineIn >> curMat;
+			mats[curMat];
+		}
+		else if (type == "Ns") {
+			lineIn >> mats[curMat].Ns;
+		}
+		else if (type == "Ks") {
+			float r, g, b;
+			lineIn >> r >> g >> b;
+			mats[curMat].Ks = glm::vec3(r,g,b);
+		}
+		else if (type == "Kd") {
+			float r, g, b;
+			lineIn >> r >> g >> b;
+			mats[curMat].Kd = glm::vec3(r, g, b);
+		}
+	}
+
+	return mats;
+}
+
+Model::Model(const std::string& fileName) : m_KdUniformLoc(-1), m_KsUniformLoc(-1), m_NsUniformLoc(-1), m_isTextured(false) {
 	std::vector<std::array<float, 3>> verts;
 	std::vector<std::array<float, 3>> normals;
+	std::vector<std::array<float, 2>> uvs;
 	std::vector<ushort> iboData;
 	std::vector<float> vboData;
-	std::map<std::pair<ushort, ushort>, ushort> vertNormal2index;
+	std::map<std::array<ushort, 3>, ushort> vertNormal2index;
 	ushort currIdx = 0;
+	std::map<std::string, Material> mtllib;
+	
 
+	int lastSlash = fileName.rfind("/");
+	std::string filePrefix = lastSlash == std::string::npos ? "" : fileName.substr(0, lastSlash + 1);
 	std::ifstream in(fileName);
+	if (!in) {
+		throw GraphicsException("Unable to open: " + fileName);
+	}
 	std::string line;
 	while (std::getline(in, line)) {
 		std::istringstream lineIn(line);
@@ -33,28 +78,57 @@ Model::Model(const std::string& fileName) {
 				lineIn >> normals.back()[i];
 			}
 		}
+		else if (type == "vt") {
+			m_isTextured = true;
+			uvs.emplace_back(std::array<float, 2>());
+			for (int i = 0; i < 2; ++i) {
+				lineIn >> uvs.back()[i];
+			}
+		}
 		else if (type == "f") {
 			for (int i = 0; i < 3; ++i) {
 				std::string s;
 				lineIn >> s;
-				int slash = s.find('/');
-				assert(slash != std::string::npos);
-				assert(slash + 1 < s.size());
-				ushort v = std::stoi(s.substr(0, slash + 1));
-				ushort vn = std::stoi(s.substr(slash + 2));
-				std::pair<ushort, ushort> key = std::make_pair(v, vn);
+				std::array<ushort, 3> key{0,0,0};
+				int keyIdx = 0;
+
+				// read in the vertices vith format v/vt/vn
+				for (char ch : s) {
+					if (ch == '/') {
+						++keyIdx;
+					}
+					else {
+						key[keyIdx] = key[keyIdx] * 10 + (ch - '0');
+					}
+				}
+				
 				auto it = vertNormal2index.find(key);
 				if (it == vertNormal2index.end()) {
 					vertNormal2index[key] = currIdx++;
-					for (int i = 0; i < 3; ++i) {
-						vboData.push_back(verts[v-1][i]);
+					for (int j = 0; j < 3; ++j) {
+						vboData.push_back(verts[key[0] - 1][j]);
 					}
-					for (int i = 0; i < 3; ++i) {
-						vboData.push_back(normals[vn-1][i]);
+					for (int j = 0; j < 3; ++j) {
+						vboData.push_back(normals[key[2] - 1][j]);
+					}
+					if (m_isTextured) {
+						for (int j = 0; j < 2; ++j) {
+							vboData.push_back(uvs[key[1] - 1][j]);
+						}
 					}
 				}
 				iboData.push_back(vertNormal2index[key]);
 			}
+		}
+		else if (type == "mtllib") {
+			std::string name;
+			lineIn >> name;
+			mtllib = loadMaterials(filePrefix + name);
+		}
+		else if (type == "usemtl") {
+			std::string mtl;
+			lineIn >> mtl;
+			m_mtls.emplace_back(std::make_pair(iboData.size(), mtllib[mtl]));
 		}
 	}
 
@@ -69,17 +143,22 @@ Model::Model(const std::string& fileName) {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ibo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, iboData.size() * sizeof(ushort), (void*)iboData.data(), GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	uint stride = m_isTextured ? 8 * sizeof(float) : 6 * sizeof(float);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+
+	if (m_isTextured) {
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+	}
 
 	glBindVertexArray(0); // unbind vao first so it remembers buffer
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-	m_nVerts = verts.size();
 	m_nIndices = iboData.size();
 }
 
@@ -91,5 +170,18 @@ Model::~Model() {
 
 void Model::draw() {
 	glBindVertexArray(m_vao);
-	glDrawElements(GL_TRIANGLES, m_nIndices, GL_UNSIGNED_SHORT, (void*)0);
+	for (uint i = 0; i < m_mtls.size(); ++i) {
+		if (!m_isTextured) {
+			glUniform3fv(m_KdUniformLoc, 1, glm::value_ptr(m_mtls[i].second.Kd));
+		}
+		glUniform3fv(m_KsUniformLoc, 1, glm::value_ptr(m_mtls[i].second.Ks));
+		glUniform1f(m_NsUniformLoc, m_mtls[i].second.Ns);
+		if (i + 1 == m_mtls.size()) {
+			glDrawElements(GL_TRIANGLES, m_nIndices - m_mtls[i].first, GL_UNSIGNED_SHORT, (void*)(m_mtls[i].first * sizeof(ushort)));
+		}
+		else {
+			glDrawElements(GL_TRIANGLES, m_mtls[i+1].first - m_mtls[i].first, GL_UNSIGNED_SHORT, (void*)(m_mtls[i].first * sizeof(ushort)));
+		}
+	}
+	
 }

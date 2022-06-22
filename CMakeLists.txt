@@ -17,7 +17,7 @@ include_directories(${GLEW_INCLUDE_DIRS})
 message(STATUS "GLEW_INCLUDE_DIRS=${GLEW_INCLUDE_DIRS}")
 
 
-add_executable(SDL2Test "Main.cpp" "Util.cpp" "Util.h" "ShaderProgram.cpp" "ShaderProgram.h" "Texture.h" "Texture.cpp" "Types.h" "Camera.cpp" "Model.h" "Model.cpp")
+add_executable(SDL2Test "Main.cpp" "Util.cpp" "Util.h" "ShaderProgram.cpp" "ShaderProgram.h" "Texture.h" "Texture.cpp" "Types.h" "Camera.cpp" "Model.h" "Model.cpp" "Material.h")
 target_link_libraries(SDL2Test ${SDL2_LIBRARIES} ${OPENGL_LIBRARY} ${GLEW_LIBRARIES})
 if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 	add_compile_definitions(DEBUG)

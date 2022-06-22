@@ -57,41 +57,31 @@ int main(int ArgCount, char** Args)
         ShaderProgram program("shaders/vert.vs", "shaders/frag.fs");
         ShaderProgram program2("shaders/vert2.vs", "shaders/frag2.fs");
 
-        GLint samplerLocation = glGetUniformLocation(program.getId(), "sampler");
-        GLint PVMLocation = glGetUniformLocation(program.getId(), "PVM");
+
+        GLint prog1PVMLocation = glGetUniformLocation(program.getId(), "PVM");
+        GLint prog1NormalMatrixLocation = glGetUniformLocation(program.getId(), "normalMatrix");
+        GLint prog1VsEyeLocation = glGetUniformLocation(program.getId(), "vs_eye");
+        GLint prog1SamplerLocation = glGetUniformLocation(program.getId(), "sampler");
+        GLint prog1LightDirLocation = glGetUniformLocation(program.getId(), "lightDir");
+        GLint prog1LightColourLocation = glGetUniformLocation(program.getId(), "lightColour");
+        GLint prog1AmbientColourLocation = glGetUniformLocation(program.getId(), "ambientColour");
+        GLint prog1KsLocation = glGetUniformLocation(program.getId(), "Ks");
+        GLint prog1NsLocation = glGetUniformLocation(program.getId(), "Ns");
 
         GLint prog2PVMLocation = glGetUniformLocation(program2.getId(), "PVM");
         GLint prog2NormalMatrixLocation = glGetUniformLocation(program2.getId(), "normalMatrix");
+        GLint prog2VsEyeLocation = glGetUniformLocation(program2.getId(), "vs_eye");
         GLint prog2LightDirLocation = glGetUniformLocation(program2.getId(), "lightDir");
-        GLint prog2DiffuseColourLocation = glGetUniformLocation(program2.getId(), "diffuseColour");
+        GLint prog2LightColourLocation = glGetUniformLocation(program2.getId(), "lightColour");
         GLint prog2AmbientColourLocation = glGetUniformLocation(program2.getId(), "ambientColour");
+        GLint prog2KdLocation = glGetUniformLocation(program2.getId(), "Kd");
+        GLint prog2KsLocation = glGetUniformLocation(program2.getId(), "Ks");
+        GLint prog2NsLocation = glGetUniformLocation(program2.getId(), "Ns");
 
-        float verts[20]{
-            // x,y,z,s,t
-            -0.5f, -0.5f, 0.0f, 0.0f, 0.0f,
-            0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-            -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-            0.5f, 0.5f, 0.0f, 1.0f, 1.0f,
-        };
-        GLuint vbo;
-        glGenBuffers(1, &vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(verts), (void*)verts, GL_STATIC_DRAW);
-
-        GLuint vao;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3*sizeof(float)));
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-        glBindVertexArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        Texture texture("textures/ht.dds");
+        Texture texture("textures/123456.dds");
 
         Model tree("models/simpletree.obj");
+        Model cube("models/texturedCube.obj");
 
         Camera cam;
         cam.pos = glm::vec3(0,0,3);
@@ -121,8 +111,8 @@ int main(int ArgCount, char** Args)
                     running = false;
                 }
                 else if (e.type == SDL_MOUSEMOTION) {
-                    float dx = e.motion.xrel;
-                    float dy = e.motion.yrel;
+                    float dx = float(e.motion.xrel);
+                    float dy = float(e.motion.yrel);
                     cam.yaw -= dx / float(window_w) * glm::radians(180.0f);
                     cam.pitch += dy / float(window_h) * glm::radians(90.0f);
                 }
@@ -151,34 +141,41 @@ int main(int ArgCount, char** Args)
 
             SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
             glViewport(0, 0, framebuffer_w, framebuffer_h);
-            glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
             program.use();
-            glBindVertexArray(vao);
             glActiveTexture(GL_TEXTURE0);
             texture.bind();
-            glUniform1i(samplerLocation, 0);
-            
-            glm::mat4 pvm = cam.getP() * cam.getV();
+            glUniform1i(prog1SamplerLocation, 0);
 
-            glUniformMatrix4fv(PVMLocation, 1, false, value_ptr(pvm));
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            glm::mat4 pvm = cam.getP() * cam.getV();
+            glm::mat3 m3(1.0f);
+            glUniformMatrix4fv(prog1PVMLocation, 1, false, glm::value_ptr(pvm));
+            glUniformMatrix3fv(prog1NormalMatrixLocation, 1, false, glm::value_ptr(m3));
+            glUniform3f(prog1LightDirLocation, 1, 0, 0);
+            glUniform3f(prog1AmbientColourLocation, 0.5f, 0.5f, 0.5f);
+            glUniform3f(prog1LightColourLocation, 0.5f, 0.0f, 0.0f);
+            glUniform3fv(prog1VsEyeLocation, 1, glm::value_ptr(cam.pos));
+
+            cube.m_KsUniformLoc = prog1KsLocation;
+            cube.m_NsUniformLoc = prog1NsLocation;
+            cube.draw();
             
             program2.use();
-            glUniformMatrix4fv(prog2PVMLocation, 1, false, value_ptr(pvm));
-            glm::mat3 m3(1.0f);
-            glUniformMatrix3fv(prog2NormalMatrixLocation, 1, false, value_ptr(m3));
+            glUniformMatrix4fv(prog2PVMLocation, 1, false, glm::value_ptr(pvm));
+            glUniformMatrix3fv(prog2NormalMatrixLocation, 1, false, glm::value_ptr(m3));
             glUniform3f(prog2LightDirLocation, 1, 0, 0);
-            glUniform3f(prog2AmbientColourLocation, 0.2f, 0.2f, 0.2f);
-            glUniform3f(prog2DiffuseColourLocation, 0.0f, 1.0f, 0.0f);
+            glUniform3f(prog2AmbientColourLocation, 0.3f, 0.3f, 0.3f);
+            glUniform3f(prog2LightColourLocation, 1.0f, 1.0f, 1.0f);
+            glUniform3fv(prog2VsEyeLocation, 1, glm::value_ptr(cam.pos));
+            tree.m_KdUniformLoc = prog2KdLocation;
+            tree.m_KsUniformLoc = prog2KsLocation;
+            tree.m_NsUniformLoc = prog2NsLocation;
             tree.draw();
 
             SDL_GL_SwapWindow(window);
         }
-
-        glDeleteVertexArrays(1, &vao);
-        glDeleteBuffers(1, &vbo);
     }
     catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
