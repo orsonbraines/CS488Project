@@ -9,14 +9,17 @@
 #include "Util.h"
 #include "ShaderProgram.h"
 #include "Texture.h"
+#include "Camera.h"
 
 int main(int ArgCount, char** Args)
 {
     if (!SDL_WasInit(SDL_INIT_EVERYTHING)) {
         SDL_Init(SDL_INIT_EVERYTHING);
     }
-    int w = 512;
-    int h = 512;
+    int framebuffer_w = 512;
+    int framebuffer_h = 512;
+    int window_w = 512;
+    int window_h = 512;
     unsigned WindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
@@ -27,9 +30,11 @@ int main(int ArgCount, char** Args)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_Window* window = SDL_CreateWindow("SDL OpenGL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, w, h, WindowFlags);
+    SDL_Window* window = SDL_CreateWindow("SDL OpenGL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, WindowFlags);
     assert(window);
     SDL_GLContext context = SDL_GL_CreateContext(window);
+    int err = SDL_SetRelativeMouseMode(SDL_TRUE);
+    assert(err == 0);
     int glewErr = glewInit();
     if (glewErr != GLEW_OK) {
         std::cerr << glewGetErrorString(glewErr) << std::endl;
@@ -78,15 +83,21 @@ int main(int ArgCount, char** Args)
 
         Texture texture("textures/ht.dds");
 
+        Camera cam;
+        cam.pos = glm::vec3(0,0,3);
+        cam.yaw = glm::radians(180.0f);
+        cam.farZ = 100.0f;
+
         bool running = true;
         while (running)
         {
-            SDL_Event Event;
-            while (SDL_PollEvent(&Event))
+            SDL_GetWindowSize(window, &window_w, &window_h);
+            SDL_Event e;
+            while (SDL_PollEvent(&e))
             {
-                if (Event.type == SDL_KEYDOWN)
+                if (e.type == SDL_KEYDOWN)
                 {
-                    switch (Event.key.keysym.sym)
+                    switch (e.key.keysym.sym)
                     {
                     case SDLK_ESCAPE:
                         running = false;
@@ -95,13 +106,41 @@ int main(int ArgCount, char** Args)
                         break;
                     }
                 }
-                else if (Event.type == SDL_QUIT)
+                else if (e.type == SDL_QUIT)
                 {
                     running = false;
                 }
+                else if (e.type == SDL_MOUSEMOTION) {
+                    float dx = e.motion.xrel;
+                    float dy = e.motion.yrel;
+                    cam.yaw -= dx / float(window_w) * glm::radians(180.0f);
+                    cam.pitch += dy / float(window_h) * glm::radians(90.0f);
+                }
             }
-            SDL_GL_GetDrawableSize(window, &w, &h);
-            glViewport(0, 0, w, h);
+
+            {
+                int numkeys;
+                const Uint8* keystate = SDL_GetKeyboardState(&numkeys);
+                assert(numkeys > SDL_SCANCODE_W && numkeys > SDL_SCANCODE_A && numkeys > SDL_SCANCODE_S && numkeys > SDL_SCANCODE_D);
+                glm::vec3 forward = cam.getViewDir();
+                glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0,1,0)));
+                if (keystate[SDL_SCANCODE_W]) {
+                    cam.pos += 0.1f * forward;
+                }
+                if (keystate[SDL_SCANCODE_S]) {
+                    cam.pos -= 0.1f * forward;
+                }
+                if (keystate[SDL_SCANCODE_A]) {
+                    cam.pos -= 0.01f * right;
+                }
+                if (keystate[SDL_SCANCODE_D]) {
+                    cam.pos += 0.01f * right;
+                }
+            }
+
+
+            SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
+            glViewport(0, 0, framebuffer_w, framebuffer_h);
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT);
             program.use();
@@ -109,11 +148,16 @@ int main(int ArgCount, char** Args)
             glActiveTexture(GL_TEXTURE0);
             texture.bind();
             glUniform1i(samplerLocation, 0);
-            float displacement = SDL_GetTicks() % 2000;
-            displacement = displacement / 1000.0f - 1.0f;
-            float PVM[16] = { 1,0,0,0, 0,1,0,0, 0,0,1,0, displacement,0,0,1 };
-            glUniformMatrix4fv(PVMLocation, 1, false, PVM);
+            
+            glm::mat4 pvm = cam.getP() * cam.getV();
+            //std::cout << pvm << std::endl;
+            //pvm = glm::mat4(1.0);
+
+            glUniformMatrix4fv(PVMLocation, 1, false, value_ptr(pvm));
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            //PVM[0] = 0.5f; PVM[5] = 0.5f; PVM[12] = -0.5f; PVM[13] = -0.5f;
+            //glUniformMatrix4fv(PVMLocation, 1, false, PVM);
+            //glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
             SDL_GL_SwapWindow(window);
         }
