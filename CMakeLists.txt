@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.7)
 
 project(SDL2Test)
 
+cmake_policy(SET CMP0072 NEW)
+
+if (UNIX)
+	set(CMAKE_MODULE_PATH ~/.local/lib/cmake)
+endif (UNIX)
+
 find_package(SDL2 REQUIRED)
 include_directories(${SDL2_INCLUDE_DIRS})
 message(STATUS "SDL2_INCLUDE_DIRS=${SDL2_INCLUDE_DIRS}")
