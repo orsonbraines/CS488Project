@@ -163,6 +163,7 @@ Model::Model(const std::string& fileName) : m_isTextured(false) {
 }
 
 Model::~Model() {
+	glDeleteVertexArrays(1, &m_vao);
 	glDeleteBuffers(1, &m_vbo);
 	glDeleteBuffers(1, &m_ibo);
 }
@@ -191,6 +192,7 @@ void ModelInstance::draw() const {
 			glDrawElements(GL_TRIANGLES, mtls[i + 1].first - mtls[i].first, GL_UNSIGNED_SHORT, (void*)(mtls[i].first * sizeof(ushort)));
 		}
 	}
+	glBindVertexArray(0);
 }
 
 void ModelInstance::setUniformLocations(GLint KdUniformLoc, GLint KsUniformLoc, GLint NsUniformLoc) {

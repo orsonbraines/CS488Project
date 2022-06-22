@@ -12,6 +12,7 @@
 #include "Texture.h"
 #include "Camera.h"
 #include "Model.h"
+#include "GridMesh.h"
 
 int main(int ArgCount, char** Args)
 {
@@ -57,6 +58,7 @@ int main(int ArgCount, char** Args)
 
         ShaderProgram program("shaders/vert.vs", "shaders/frag.fs");
         ShaderProgram program2("shaders/vert2.vs", "shaders/frag2.fs");
+        ShaderProgram hmapProg("shaders/hmap.vs", "shaders/hmap.fs");
 
 
         GLint prog1PVMLocation = glGetUniformLocation(program.getId(), "PVM");
@@ -79,14 +81,21 @@ int main(int ArgCount, char** Args)
         GLint prog2KsLocation = glGetUniformLocation(program2.getId(), "Ks");
         GLint prog2NsLocation = glGetUniformLocation(program2.getId(), "Ns");
 
+        GLint hmapPVLocation = glGetUniformLocation(hmapProg.getId(), "PV");
+        GLint hmapSamplerLocation = glGetUniformLocation(hmapProg.getId(), "sampler");
+
         Texture texture("textures/123456.dds");
+        Texture texture2("textures/heightmap.bmp");
 
         Model tree("models/simpletree.obj");
         ModelInstance tree1(&tree);
         tree1.transform(glm::scale(glm::vec3(0.5f, 1.0f, 0.5f)));
-        tree1.transform(glm::translate(glm::vec3(1.0f, 0.0f, 0.0f)));
+        tree1.transform(glm::translate(glm::vec3(2.0f, 0.0f, -2.0f)));
         Model cube("models/texturedCube.obj");
         ModelInstance cube1(&cube);
+        cube1.transform(glm::scale(glm::vec3(0.5f, 0.5f, 0.5f)));
+        cube1.transform(glm::translate(glm::vec3(-0.5f, 0.5f, 0.5f)));
+        GridMesh gridMesh(128,128);
 
         Camera cam;
         cam.pos = glm::vec3(0,0,8);
@@ -126,9 +135,10 @@ int main(int ArgCount, char** Args)
             {
                 int numkeys;
                 const Uint8* keystate = SDL_GetKeyboardState(&numkeys);
-                assert(numkeys > SDL_SCANCODE_W && numkeys > SDL_SCANCODE_A && numkeys > SDL_SCANCODE_S && numkeys > SDL_SCANCODE_D);
+                assert(numkeys > SDL_SCANCODE_W);
                 glm::vec3 forward = cam.getViewDir();
                 glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0,1,0)));
+                glm::vec3 up = glm::normalize(glm::cross(right, forward));
                 if (keystate[SDL_SCANCODE_W]) {
                     cam.pos += 0.03f * forward;
                 }
@@ -140,6 +150,12 @@ int main(int ArgCount, char** Args)
                 }
                 if (keystate[SDL_SCANCODE_D]) {
                     cam.pos += 0.03f * right;
+                }
+                if (keystate[SDL_SCANCODE_E]) {
+                    cam.pos += 0.03f * up;
+                }
+                if (keystate[SDL_SCANCODE_Q]) {
+                    cam.pos -= 0.03f * up;
                 }
             }
 
@@ -178,6 +194,14 @@ int main(int ArgCount, char** Args)
             glUniform3fv(prog2VsEyeLocation, 1, glm::value_ptr(cam.pos));
             tree1.setUniformLocations(prog2KdLocation, prog2KsLocation,prog2NsLocation );
             tree1.draw();
+
+            hmapProg.use();
+            glActiveTexture(GL_TEXTURE1);
+            texture2.bind();
+            glUniform1i(hmapSamplerLocation, 1);
+            glm::mat4 pv = cam.getP() * cam.getV();
+            glUniformMatrix4fv(hmapPVLocation, 1, false, glm::value_ptr(pv));
+            gridMesh.draw();
 
             SDL_GL_SwapWindow(window);
         }

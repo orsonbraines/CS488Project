@@ -7,6 +7,73 @@
 #include "Util.h"
 
 Texture::Texture(const std::string& texFilePath) : m_texId(0) {
+	size_t dot = texFilePath.find('.');
+	assert(dot != std::string::npos);
+	std::string ext = texFilePath.substr(dot + 1);
+	if (ext == "dds") {
+		loadDDS(texFilePath);
+	}
+	else if (ext == "bmp") {
+		loadBMP(texFilePath);
+	}
+	else {
+		throw GraphicsException("Unrecognized texture file extension: " + ext);
+	}
+}
+
+void Texture::loadBMP(const std::string& texFilePath) {
+	std::ifstream in(texFilePath, std::ios_base::binary);
+	if (!in) {
+		throw GraphicsException("Unable to open: " + texFilePath);
+	}
+
+	ushort hdr[7];
+	in.read((char*)hdr, 14);
+	if (!in || hdr[0] != 0x4d42) {
+		throw GraphicsException("Bad magic number");
+	}
+	uint size = hdr[1] + hdr[2] * (1u << 16);
+	uint pixelOffset = hdr[5] + hdr[6] * (1u << 16);
+
+	char* buf = new char[size];
+	memcpy(buf, hdr, 14);
+	in.read((char*)buf + 14, size - 14);
+	if (!in) {
+		delete[] buf;
+		throw GraphicsException("error reading bmp");
+	}
+
+	uint hdr2Size = *(u32*)(buf + 14);
+	assert(hdr2Size == 40);
+	uint width = *(ushort*)(buf + 18);
+	uint height = *(ushort*)(buf + 22);
+	uint bitsPerPixel = *(ushort*)(buf + 28);
+	uint compressionMethod = *(ushort*)(buf + 30);
+	assert(compressionMethod == 0);
+
+	DBG(std::cerr << "size " << size << " offset " << pixelOffset << " width " << width << " height " << height << std::endl);
+
+	// greyScale
+	if (bitsPerPixel != 8) {
+		delete[] buf;
+		throw GraphicsException("for now only greyscale images are supported");
+	}
+
+	glGenTextures(1, &m_texId);
+	glBindTexture(GL_TEXTURE_2D, m_texId);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, buf + pixelOffset);
+
+	delete[] buf;
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void Texture::loadDDS(const std::string& texFilePath) {
 	std::ifstream in(texFilePath, std::ios_base::binary);
 	if (!in) {
 		throw GraphicsException("Unable to open: " + texFilePath);
