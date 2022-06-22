@@ -10,6 +10,7 @@
 #include "ShaderProgram.h"
 #include "Texture.h"
 #include "Camera.h"
+#include "Model.h"
 
 int main(int ArgCount, char** Args)
 {
@@ -54,9 +55,16 @@ int main(int ArgCount, char** Args)
         glDebugMessageCallback(loggingCallback, nullptr);
 
         ShaderProgram program("shaders/vert.vs", "shaders/frag.fs");
+        ShaderProgram program2("shaders/vert2.vs", "shaders/frag2.fs");
 
         GLint samplerLocation = glGetUniformLocation(program.getId(), "sampler");
         GLint PVMLocation = glGetUniformLocation(program.getId(), "PVM");
+
+        GLint prog2PVMLocation = glGetUniformLocation(program2.getId(), "PVM");
+        GLint prog2NormalMatrixLocation = glGetUniformLocation(program2.getId(), "normalMatrix");
+        GLint prog2LightDirLocation = glGetUniformLocation(program2.getId(), "lightDir");
+        GLint prog2DiffuseColourLocation = glGetUniformLocation(program2.getId(), "diffuseColour");
+        GLint prog2AmbientColourLocation = glGetUniformLocation(program2.getId(), "ambientColour");
 
         float verts[20]{
             // x,y,z,s,t
@@ -82,6 +90,8 @@ int main(int ArgCount, char** Args)
         glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         Texture texture("textures/ht.dds");
+
+        Model tree("models/simpletree.obj");
 
         Camera cam;
         cam.pos = glm::vec3(0,0,3);
@@ -125,16 +135,16 @@ int main(int ArgCount, char** Args)
                 glm::vec3 forward = cam.getViewDir();
                 glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0,1,0)));
                 if (keystate[SDL_SCANCODE_W]) {
-                    cam.pos += 0.1f * forward;
+                    cam.pos += 0.03f * forward;
                 }
                 if (keystate[SDL_SCANCODE_S]) {
-                    cam.pos -= 0.1f * forward;
+                    cam.pos -= 0.03f * forward;
                 }
                 if (keystate[SDL_SCANCODE_A]) {
-                    cam.pos -= 0.01f * right;
+                    cam.pos -= 0.03f * right;
                 }
                 if (keystate[SDL_SCANCODE_D]) {
-                    cam.pos += 0.01f * right;
+                    cam.pos += 0.03f * right;
                 }
             }
 
@@ -142,7 +152,8 @@ int main(int ArgCount, char** Args)
             SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
             glViewport(0, 0, framebuffer_w, framebuffer_h);
             glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glEnable(GL_DEPTH_TEST);
             program.use();
             glBindVertexArray(vao);
             glActiveTexture(GL_TEXTURE0);
@@ -150,14 +161,18 @@ int main(int ArgCount, char** Args)
             glUniform1i(samplerLocation, 0);
             
             glm::mat4 pvm = cam.getP() * cam.getV();
-            //std::cout << pvm << std::endl;
-            //pvm = glm::mat4(1.0);
 
             glUniformMatrix4fv(PVMLocation, 1, false, value_ptr(pvm));
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            //PVM[0] = 0.5f; PVM[5] = 0.5f; PVM[12] = -0.5f; PVM[13] = -0.5f;
-            //glUniformMatrix4fv(PVMLocation, 1, false, PVM);
-            //glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            
+            program2.use();
+            glUniformMatrix4fv(prog2PVMLocation, 1, false, value_ptr(pvm));
+            glm::mat3 m3(1.0f);
+            glUniformMatrix3fv(prog2NormalMatrixLocation, 1, false, value_ptr(m3));
+            glUniform3f(prog2LightDirLocation, 1, 0, 0);
+            glUniform3f(prog2AmbientColourLocation, 0.2f, 0.2f, 0.2f);
+            glUniform3f(prog2DiffuseColourLocation, 0.0f, 1.0f, 0.0f);
+            tree.draw();
 
             SDL_GL_SwapWindow(window);
         }

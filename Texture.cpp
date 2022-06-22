@@ -81,8 +81,6 @@ Texture::Texture(const std::string& texFilePath) : m_texId(0) {
 		}
 	}
 
-	glGenerateMipmap(GL_TEXTURE_2D);
-
 	delete[] buf;
 
 	if (!in) {
