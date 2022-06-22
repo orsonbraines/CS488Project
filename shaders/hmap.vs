@@ -7,12 +7,15 @@ layout(location = 0) in vec2 pos;
 out vec2 fs_uv;
 
 uniform sampler2D sampler;
-uniform mat4 PV;
+uniform mat4 PVM;
+//uniform vec2 meshScale;
+//uniform vec2 meshTrans;
+
 //uniform mat3 normalMatrix;
 //uniform vec3 vs_eye;
 
 void main() {
 	fs_uv = pos;
 	float y = texture(sampler, pos).r;
-	gl_Position = PV * vec4(pos.x, y, pos.y, 1.0);
+	gl_Position = PVM * vec4(pos.x, y, pos.y, 1.0);
 }

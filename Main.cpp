@@ -81,7 +81,7 @@ int main(int ArgCount, char** Args)
         GLint prog2KsLocation = glGetUniformLocation(program2.getId(), "Ks");
         GLint prog2NsLocation = glGetUniformLocation(program2.getId(), "Ns");
 
-        GLint hmapPVLocation = glGetUniformLocation(hmapProg.getId(), "PV");
+        GLint hmapPVMLocation = glGetUniformLocation(hmapProg.getId(), "PVM");
         GLint hmapSamplerLocation = glGetUniformLocation(hmapProg.getId(), "sampler");
 
         Texture texture("textures/123456.dds");
@@ -199,8 +199,9 @@ int main(int ArgCount, char** Args)
             glActiveTexture(GL_TEXTURE1);
             texture2.bind();
             glUniform1i(hmapSamplerLocation, 1);
-            glm::mat4 pv = cam.getP() * cam.getV();
-            glUniformMatrix4fv(hmapPVLocation, 1, false, glm::value_ptr(pv));
+            glm::mat4 meshM = glm::scale(glm::vec3(10.0f, 1.0f, 10.0f));
+            pvm = cam.getP() * cam.getV() * meshM;
+            glUniformMatrix4fv(hmapPVMLocation, 1, GL_FALSE, glm::value_ptr(pvm));
             gridMesh.draw();
 
             SDL_GL_SwapWindow(window);
