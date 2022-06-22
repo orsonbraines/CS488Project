@@ -44,7 +44,7 @@ static std::map<std::string, Material> loadMaterials(const std::string& mtlFile)
 	return mats;
 }
 
-Model::Model(const std::string& fileName) : m_KdUniformLoc(-1), m_KsUniformLoc(-1), m_NsUniformLoc(-1), m_isTextured(false) {
+Model::Model(const std::string& fileName) : m_isTextured(false) {
 	std::vector<std::array<float, 3>> verts;
 	std::vector<std::array<float, 3>> normals;
 	std::vector<std::array<float, 2>> uvs;
@@ -163,25 +163,38 @@ Model::Model(const std::string& fileName) : m_KdUniformLoc(-1), m_KsUniformLoc(-
 }
 
 Model::~Model() {
-	glDeleteVertexArrays(1, &m_vao);
 	glDeleteBuffers(1, &m_vbo);
 	glDeleteBuffers(1, &m_ibo);
 }
 
-void Model::draw() {
-	glBindVertexArray(m_vao);
-	for (uint i = 0; i < m_mtls.size(); ++i) {
-		if (!m_isTextured) {
-			glUniform3fv(m_KdUniformLoc, 1, glm::value_ptr(m_mtls[i].second.Kd));
+ModelInstance::ModelInstance(Model* model) : 
+	m_KdUniformLoc(-1), 
+	m_KsUniformLoc(-1), 
+	m_NsUniformLoc(-1),
+	m_model(model),
+	m_M(1.0f) {}
+
+void ModelInstance::draw() const {
+	assert(m_model);
+	const std::vector<std::pair<uint, Material>>& mtls = m_model->getMtls();
+	glBindVertexArray(m_model->getVao());
+	for (uint i = 0; i < mtls.size(); ++i) {
+		if (!m_model->isTextured()) {
+			glUniform3fv(m_KdUniformLoc, 1, glm::value_ptr(mtls[i].second.Kd));
 		}
-		glUniform3fv(m_KsUniformLoc, 1, glm::value_ptr(m_mtls[i].second.Ks));
-		glUniform1f(m_NsUniformLoc, m_mtls[i].second.Ns);
-		if (i + 1 == m_mtls.size()) {
-			glDrawElements(GL_TRIANGLES, m_nIndices - m_mtls[i].first, GL_UNSIGNED_SHORT, (void*)(m_mtls[i].first * sizeof(ushort)));
+		glUniform3fv(m_KsUniformLoc, 1, glm::value_ptr(mtls[i].second.Ks));
+		glUniform1f(m_NsUniformLoc, mtls[i].second.Ns);
+		if (i + 1 == mtls.size()) {
+			glDrawElements(GL_TRIANGLES, m_model->getNumIndices() - mtls[i].first, GL_UNSIGNED_SHORT, (void*)(mtls[i].first * sizeof(ushort)));
 		}
 		else {
-			glDrawElements(GL_TRIANGLES, m_mtls[i+1].first - m_mtls[i].first, GL_UNSIGNED_SHORT, (void*)(m_mtls[i].first * sizeof(ushort)));
+			glDrawElements(GL_TRIANGLES, mtls[i + 1].first - mtls[i].first, GL_UNSIGNED_SHORT, (void*)(mtls[i].first * sizeof(ushort)));
 		}
 	}
-	
+}
+
+void ModelInstance::setUniformLocations(GLint KdUniformLoc, GLint KsUniformLoc, GLint NsUniformLoc) {
+	m_KdUniformLoc = KdUniformLoc;
+	m_KsUniformLoc = KsUniformLoc;
+	m_NsUniformLoc = NsUniformLoc;
 }

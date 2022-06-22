@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 #include <SDL_opengl.h>
 #include <glm/ext.hpp>
+#include <glm/gtx/transform.hpp>
 
 #include "Util.h"
 #include "ShaderProgram.h"
@@ -81,10 +82,14 @@ int main(int ArgCount, char** Args)
         Texture texture("textures/123456.dds");
 
         Model tree("models/simpletree.obj");
+        ModelInstance tree1(&tree);
+        tree1.transform(glm::scale(glm::vec3(0.5f, 1.0f, 0.5f)));
+        tree1.transform(glm::translate(glm::vec3(1.0f, 0.0f, 0.0f)));
         Model cube("models/texturedCube.obj");
+        ModelInstance cube1(&cube);
 
         Camera cam;
-        cam.pos = glm::vec3(0,0,3);
+        cam.pos = glm::vec3(0,0,8);
         cam.yaw = glm::radians(180.0f);
         cam.farZ = 100.0f;
 
@@ -141,7 +146,7 @@ int main(int ArgCount, char** Args)
 
             SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
             glViewport(0, 0, framebuffer_w, framebuffer_h);
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
             program.use();
@@ -149,30 +154,30 @@ int main(int ArgCount, char** Args)
             texture.bind();
             glUniform1i(prog1SamplerLocation, 0);
 
-            glm::mat4 pvm = cam.getP() * cam.getV();
-            glm::mat3 m3(1.0f);
+            glm::mat4 pvm = cam.getP() * cam.getV() * cube1.getM();
+            //glm::mat3 m3(1.0f);
+            glm::mat3 normMatCube = glm::mat3(glm::transpose(glm::inverse(cube1.getM())));
             glUniformMatrix4fv(prog1PVMLocation, 1, false, glm::value_ptr(pvm));
-            glUniformMatrix3fv(prog1NormalMatrixLocation, 1, false, glm::value_ptr(m3));
+            glUniformMatrix3fv(prog1NormalMatrixLocation, 1, false, glm::value_ptr(normMatCube));
             glUniform3f(prog1LightDirLocation, 1, 0, 0);
             glUniform3f(prog1AmbientColourLocation, 0.5f, 0.5f, 0.5f);
             glUniform3f(prog1LightColourLocation, 0.5f, 0.0f, 0.0f);
             glUniform3fv(prog1VsEyeLocation, 1, glm::value_ptr(cam.pos));
 
-            cube.m_KsUniformLoc = prog1KsLocation;
-            cube.m_NsUniformLoc = prog1NsLocation;
-            cube.draw();
+            cube1.setUniformLocations(-1, prog1KsLocation, prog1NsLocation);
+            cube1.draw();
             
             program2.use();
+            pvm = cam.getP() * cam.getV() * tree1.getM();
+            normMatCube = glm::mat3(glm::transpose(glm::inverse(tree1.getM())));
             glUniformMatrix4fv(prog2PVMLocation, 1, false, glm::value_ptr(pvm));
-            glUniformMatrix3fv(prog2NormalMatrixLocation, 1, false, glm::value_ptr(m3));
+            glUniformMatrix3fv(prog2NormalMatrixLocation, 1, false, glm::value_ptr(normMatCube));
             glUniform3f(prog2LightDirLocation, 1, 0, 0);
             glUniform3f(prog2AmbientColourLocation, 0.3f, 0.3f, 0.3f);
             glUniform3f(prog2LightColourLocation, 1.0f, 1.0f, 1.0f);
             glUniform3fv(prog2VsEyeLocation, 1, glm::value_ptr(cam.pos));
-            tree.m_KdUniformLoc = prog2KdLocation;
-            tree.m_KsUniformLoc = prog2KsLocation;
-            tree.m_NsUniformLoc = prog2NsLocation;
-            tree.draw();
+            tree1.setUniformLocations(prog2KdLocation, prog2KsLocation,prog2NsLocation );
+            tree1.draw();
 
             SDL_GL_SwapWindow(window);
         }
