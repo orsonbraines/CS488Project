@@ -14,6 +14,7 @@
 #include "Model.h"
 #include "GridMesh.h"
 #include "Cylinder.h"
+#include "SmokeSystem.h"
 
 int main(int ArgCount, char** Args)
 {
@@ -85,20 +86,6 @@ int main(int ArgCount, char** Args)
         GLint prog2KsLocation = glGetUniformLocation(program2.getId(), "Ks");
         GLint prog2NsLocation = glGetUniformLocation(program2.getId(), "Ns");
 
-        /*uniform sampler2D sampler;
-uniform mat4 PVM;
-uniform mat4 M;
-
-uniform mat3 normalMatrix;
-uniform vec3 vs_eye;
-uniform vec3 lightDir;
-uniform vec3 lightColour;
-uniform vec3 ambientColour;
-
-uniform vec3 Kd;
-uniform vec3 Ks;
-uniform float Ns;
-*/
         GLint hmapSamplerLocation = glGetUniformLocation(hmapProg.getId(), "sampler");
         GLint hmapPVMLocation = glGetUniformLocation(hmapProg.getId(), "PVM");
         GLint hmapMLocation = glGetUniformLocation(hmapProg.getId(), "M");
@@ -147,6 +134,7 @@ uniform float Ns;
         cyl1.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(1,0,0)));
         cyl1.transform(glm::scale(glm::vec3(0.3f, 4.0f, 0.3f)));
         cyl1.transform(glm::translate(glm::vec3(3.0f, 0.0f, 1.0f)));
+        SmokeSystem smoke(10000);
 
         Camera cam;
         cam.pos = glm::vec3(0,0,8);
@@ -222,7 +210,6 @@ uniform float Ns;
             glUniform1i(prog1SamplerLocation, 0);
 
             glm::mat4 pvm = cam.getP() * cam.getV() * cube1.getM();
-            //glm::mat3 m3(1.0f);
             glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(cube1.getM())));
             glUniformMatrix4fv(prog1PVMLocation, 1, false, glm::value_ptr(pvm));
             glUniformMatrix4fv(prog1MLocation, 1, false, glm::value_ptr(cube1.getM()));
@@ -286,6 +273,10 @@ uniform float Ns;
             glUniform1f(hmapNsLocation, 0);
             glUniform3f(hmapKdLocation, 0.0f, 0.7f, 0.0f);
             gridMesh.draw();
+
+            smoke.setPV(cam.getP()* cam.getV());
+            smoke.tick();
+            smoke.draw();
 
             SDL_GL_SwapWindow(window);
         }
