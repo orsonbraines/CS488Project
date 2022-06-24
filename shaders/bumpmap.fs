@@ -24,7 +24,7 @@ void main() {
 	vec3 l = normalize(lightDir);
 
 	float dhdu = (texture(heightfield, fs_uv + vec2(0.01, 0)).r - texture(heightfield, fs_uv - vec2(0.01, 0)).r) * 3.0;
-	float dhdv = (texture(heightfield, fs_uv + vec2(0.01, 0)).r - texture(heightfield, fs_uv - vec2(0.01, 0)).r) * 3.0;
+	float dhdv = (texture(heightfield, fs_uv + vec2(0, 0.01)).r - texture(heightfield, fs_uv - vec2(0, 0.01)).r) * 3.0;
 	n = normalize(n - dhdu * normalize(fs_udir) - dhdv * normalize(fs_vdir));
 
 	float intensity = dot(n, l);

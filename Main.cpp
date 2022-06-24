@@ -59,7 +59,7 @@ int main(int ArgCount, char** Args)
 
         ShaderProgram program("shaders/vert.vs", "shaders/frag.fs");
         ShaderProgram program2("shaders/vert2.vs", "shaders/frag2.fs");
-        ShaderProgram hmapProg("shaders/hmap.vs", "shaders/hmap.fs");
+        ShaderProgram hmapProg("shaders/hmap.vs", "shaders/frag2.fs");
         ShaderProgram bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs");
 
 
@@ -85,8 +85,31 @@ int main(int ArgCount, char** Args)
         GLint prog2KsLocation = glGetUniformLocation(program2.getId(), "Ks");
         GLint prog2NsLocation = glGetUniformLocation(program2.getId(), "Ns");
 
-        GLint hmapPVMLocation = glGetUniformLocation(hmapProg.getId(), "PVM");
+        /*uniform sampler2D sampler;
+uniform mat4 PVM;
+uniform mat4 M;
+
+uniform mat3 normalMatrix;
+uniform vec3 vs_eye;
+uniform vec3 lightDir;
+uniform vec3 lightColour;
+uniform vec3 ambientColour;
+
+uniform vec3 Kd;
+uniform vec3 Ks;
+uniform float Ns;
+*/
         GLint hmapSamplerLocation = glGetUniformLocation(hmapProg.getId(), "sampler");
+        GLint hmapPVMLocation = glGetUniformLocation(hmapProg.getId(), "PVM");
+        GLint hmapMLocation = glGetUniformLocation(hmapProg.getId(), "M");
+        GLint hmapNormalMatrixLocation = glGetUniformLocation(hmapProg.getId(), "normalMatrix");
+        GLint hmapVsEyeLocation = glGetUniformLocation(hmapProg.getId(), "vs_eye");
+        GLint hmapLightDirLocation = glGetUniformLocation(hmapProg.getId(), "lightDir");
+        GLint hmapLightColourLocation = glGetUniformLocation(hmapProg.getId(), "lightColour");
+        GLint hmapAmbientColourLocation = glGetUniformLocation(hmapProg.getId(), "ambientColour");
+        GLint hmapKdLocation = glGetUniformLocation(hmapProg.getId(), "Kd");
+        GLint hmapKsLocation = glGetUniformLocation(hmapProg.getId(), "Ks");
+        GLint hmapNsLocation = glGetUniformLocation(hmapProg.getId(), "Ns");
 
         GLint bumpmapProgPVMLocation = glGetUniformLocation(bumpmapProg.getId(), "PVM");
         GLint bumpmapProgMLocation = glGetUniformLocation(bumpmapProg.getId(), "M");
@@ -248,9 +271,20 @@ int main(int ArgCount, char** Args)
             glActiveTexture(GL_TEXTURE1);
             texture2.bind();
             glUniform1i(hmapSamplerLocation, 1);
-            glm::mat4 meshM = glm::scale(glm::vec3(10.0f, 1.0f, 10.0f));
+            glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1,0,0));
+            meshM = glm::scale(glm::vec3(10.0f, 1.0f, 10.0f)) * meshM;
             pvm = cam.getP() * cam.getV() * meshM;
+            normMat = glm::mat3(glm::transpose(glm::inverse(meshM)));
             glUniformMatrix4fv(hmapPVMLocation, 1, GL_FALSE, glm::value_ptr(pvm));
+            glUniformMatrix4fv(hmapMLocation, 1, false, glm::value_ptr(meshM));
+            glUniformMatrix3fv(hmapNormalMatrixLocation, 1, false, glm::value_ptr(normMat));
+            glUniform3f(hmapLightDirLocation, 0.9f, 1.0, 0);
+            glUniform3f(hmapAmbientColourLocation, 0.0f, 0.0f, 0.0f);
+            glUniform3f(hmapLightColourLocation, 1.0f, 1.0f, 1.0f);
+            glUniform3fv(hmapVsEyeLocation, 1, glm::value_ptr(cam.pos));
+            glUniform3f(hmapKsLocation, 0, 0, 0);
+            glUniform1f(hmapNsLocation, 0);
+            glUniform3f(hmapKdLocation, 0.0f, 0.7f, 0.0f);
             gridMesh.draw();
 
             SDL_GL_SwapWindow(window);
