@@ -7,11 +7,12 @@ out vec3 fs_normal;
 out vec3 fs_eye;
 
 uniform mat4 PVM;
+uniform mat4 M;
 uniform mat3 normalMatrix;
 uniform vec3 vs_eye;
 
 void main() {
 	gl_Position =  PVM * vec4(pos, 1.0);
 	fs_normal = normalMatrix * vs_normal;
-	fs_eye = vs_eye - pos;
+	fs_eye = vs_eye - vec3(M * vec4(pos, 1.0));
 }

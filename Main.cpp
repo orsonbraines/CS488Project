@@ -13,6 +13,7 @@
 #include "Camera.h"
 #include "Model.h"
 #include "GridMesh.h"
+#include "Cylinder.h"
 
 int main(int ArgCount, char** Args)
 {
@@ -59,9 +60,11 @@ int main(int ArgCount, char** Args)
         ShaderProgram program("shaders/vert.vs", "shaders/frag.fs");
         ShaderProgram program2("shaders/vert2.vs", "shaders/frag2.fs");
         ShaderProgram hmapProg("shaders/hmap.vs", "shaders/hmap.fs");
+        ShaderProgram bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs");
 
 
         GLint prog1PVMLocation = glGetUniformLocation(program.getId(), "PVM");
+        GLint prog1MLocation = glGetUniformLocation(program.getId(), "M");
         GLint prog1NormalMatrixLocation = glGetUniformLocation(program.getId(), "normalMatrix");
         GLint prog1VsEyeLocation = glGetUniformLocation(program.getId(), "vs_eye");
         GLint prog1SamplerLocation = glGetUniformLocation(program.getId(), "sampler");
@@ -72,6 +75,7 @@ int main(int ArgCount, char** Args)
         GLint prog1NsLocation = glGetUniformLocation(program.getId(), "Ns");
 
         GLint prog2PVMLocation = glGetUniformLocation(program2.getId(), "PVM");
+        GLint prog2MLocation = glGetUniformLocation(program2.getId(), "M");
         GLint prog2NormalMatrixLocation = glGetUniformLocation(program2.getId(), "normalMatrix");
         GLint prog2VsEyeLocation = glGetUniformLocation(program2.getId(), "vs_eye");
         GLint prog2LightDirLocation = glGetUniformLocation(program2.getId(), "lightDir");
@@ -84,8 +88,27 @@ int main(int ArgCount, char** Args)
         GLint hmapPVMLocation = glGetUniformLocation(hmapProg.getId(), "PVM");
         GLint hmapSamplerLocation = glGetUniformLocation(hmapProg.getId(), "sampler");
 
-        Texture texture("textures/123456.dds");
-        Texture texture2("textures/heightmap.bmp");
+        GLint bumpmapProgPVMLocation = glGetUniformLocation(bumpmapProg.getId(), "PVM");
+        GLint bumpmapProgMLocation = glGetUniformLocation(bumpmapProg.getId(), "M");
+        GLint bumpmapProgNormalMatrixLocation = glGetUniformLocation(bumpmapProg.getId(), "normalMatrix");
+        GLint bumpmapProgVsEyeLocation = glGetUniformLocation(bumpmapProg.getId(), "vs_eye");
+        GLint bumpmapProgLightDirLocation = glGetUniformLocation(bumpmapProg.getId(), "lightDir");
+        GLint bumpmapProgLightColourLocation = glGetUniformLocation(bumpmapProg.getId(), "lightColour");
+        GLint bumpmapProgAmbientColourLocation = glGetUniformLocation(bumpmapProg.getId(), "ambientColour");
+        GLint bumpmapProgKdLocation = glGetUniformLocation(bumpmapProg.getId(), "Kd");
+        GLint bumpmapProgKsLocation = glGetUniformLocation(bumpmapProg.getId(), "Ks");
+        GLint bumpmapProgNsLocation = glGetUniformLocation(bumpmapProg.getId(), "Ns");
+        GLint bumpmapProgHeighfieldLocation = glGetUniformLocation(bumpmapProg.getId(), "heightfield");
+
+        Texture texture;
+        texture.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
+        texture.loadDDS("textures/123456.dds");
+        Texture texture2;
+        texture2.loadBMP("textures/heightmap.bmp");
+        Texture bmapHeightfield;
+        bmapHeightfield.setWrapS(GL_MIRRORED_REPEAT);
+        bmapHeightfield.setWrapT(GL_MIRRORED_REPEAT);
+        bmapHeightfield.loadBMP("textures/heightfield.bmp");
 
         Model tree("models/simpletree.obj");
         ModelInstance tree1(&tree);
@@ -96,6 +119,11 @@ int main(int ArgCount, char** Args)
         cube1.transform(glm::scale(glm::vec3(0.5f, 0.5f, 0.5f)));
         cube1.transform(glm::translate(glm::vec3(-0.5f, 0.5f, 0.5f)));
         GridMesh gridMesh(128,128);
+        Cylinder cylinder;
+        CylinderInstance cyl1(&cylinder);
+        cyl1.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(1,0,0)));
+        cyl1.transform(glm::scale(glm::vec3(0.3f, 4.0f, 0.3f)));
+        cyl1.transform(glm::translate(glm::vec3(3.0f, 0.0f, 1.0f)));
 
         Camera cam;
         cam.pos = glm::vec3(0,0,8);
@@ -172,9 +200,10 @@ int main(int ArgCount, char** Args)
 
             glm::mat4 pvm = cam.getP() * cam.getV() * cube1.getM();
             //glm::mat3 m3(1.0f);
-            glm::mat3 normMatCube = glm::mat3(glm::transpose(glm::inverse(cube1.getM())));
+            glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(cube1.getM())));
             glUniformMatrix4fv(prog1PVMLocation, 1, false, glm::value_ptr(pvm));
-            glUniformMatrix3fv(prog1NormalMatrixLocation, 1, false, glm::value_ptr(normMatCube));
+            glUniformMatrix4fv(prog1MLocation, 1, false, glm::value_ptr(cube1.getM()));
+            glUniformMatrix3fv(prog1NormalMatrixLocation, 1, false, glm::value_ptr(normMat));
             glUniform3f(prog1LightDirLocation, 1, 0, 0);
             glUniform3f(prog1AmbientColourLocation, 0.5f, 0.5f, 0.5f);
             glUniform3f(prog1LightColourLocation, 0.5f, 0.0f, 0.0f);
@@ -185,15 +214,35 @@ int main(int ArgCount, char** Args)
             
             program2.use();
             pvm = cam.getP() * cam.getV() * tree1.getM();
-            normMatCube = glm::mat3(glm::transpose(glm::inverse(tree1.getM())));
+            normMat = glm::mat3(glm::transpose(glm::inverse(tree1.getM())));
             glUniformMatrix4fv(prog2PVMLocation, 1, false, glm::value_ptr(pvm));
-            glUniformMatrix3fv(prog2NormalMatrixLocation, 1, false, glm::value_ptr(normMatCube));
+            glUniformMatrix4fv(prog2MLocation, 1, false, glm::value_ptr(tree1.getM()));
+            glUniformMatrix3fv(prog2NormalMatrixLocation, 1, false, glm::value_ptr(normMat));
             glUniform3f(prog2LightDirLocation, 1, 0, 0);
-            glUniform3f(prog2AmbientColourLocation, 0.3f, 0.3f, 0.3f);
+            glUniform3f(prog2AmbientColourLocation, 0.5f, 0.5f, 0.5f);
             glUniform3f(prog2LightColourLocation, 1.0f, 1.0f, 1.0f);
             glUniform3fv(prog2VsEyeLocation, 1, glm::value_ptr(cam.pos));
             tree1.setUniformLocations(prog2KdLocation, prog2KsLocation,prog2NsLocation );
             tree1.draw();
+
+            bumpmapProg.use();
+            pvm = cam.getP() * cam.getV() * cyl1.getM();
+            normMat = glm::mat3(glm::transpose(glm::inverse(cyl1.getM())));
+            glUniformMatrix4fv(bumpmapProgPVMLocation, 1, false, glm::value_ptr(pvm));
+            glUniformMatrix4fv(bumpmapProgMLocation, 1, false, glm::value_ptr(cyl1.getM()));
+            glUniformMatrix3fv(bumpmapProgNormalMatrixLocation, 1, false, glm::value_ptr(normMat));
+            glUniform3f(bumpmapProgKsLocation, 0, 0, 0);
+            glUniform1f(bumpmapProgNsLocation, 0);
+            glUniform3f(bumpmapProgKdLocation, 0.329826f, 0.060918f, 0.008916f);
+            glUniform3f(bumpmapProgLightDirLocation, 1, 0, 0);
+            glUniform3f(bumpmapProgAmbientColourLocation, 0.5f, 0.5f, 0.5f);
+            glUniform3f(bumpmapProgLightColourLocation, 1.0f, 1.0f, 1.0f);
+            glUniform3fv(bumpmapProgVsEyeLocation, 1, glm::value_ptr(cam.pos));
+            glActiveTexture(GL_TEXTURE1);
+            bmapHeightfield.bind();
+            glUniform1i(bumpmapProgHeighfieldLocation, 1);
+            cyl1.draw();
+
 
             hmapProg.use();
             glActiveTexture(GL_TEXTURE1);

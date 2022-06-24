@@ -6,19 +6,46 @@
 #include "Texture.h"
 #include "Util.h"
 
-Texture::Texture(const std::string& texFilePath) : m_texId(0) {
-	size_t dot = texFilePath.find('.');
-	assert(dot != std::string::npos);
-	std::string ext = texFilePath.substr(dot + 1);
-	if (ext == "dds") {
-		loadDDS(texFilePath);
-	}
-	else if (ext == "bmp") {
-		loadBMP(texFilePath);
-	}
-	else {
-		throw GraphicsException("Unrecognized texture file extension: " + ext);
-	}
+Texture::Texture() : m_texId(0), m_minFilter(GL_LINEAR), m_magFilter(GL_LINEAR), m_wrapS(GL_CLAMP_TO_EDGE), m_wrapT(GL_CLAMP_TO_EDGE) {
+	glGenTextures(1, &m_texId);
+	glBindTexture(GL_TEXTURE_2D, m_texId);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, m_minFilter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, m_magFilter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, m_wrapS);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, m_wrapT);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	
+	//size_t dot = texFilePath.find('.');
+	//assert(dot != std::string::npos);
+	//std::string ext = texFilePath.substr(dot + 1);
+	//if (ext == "dds") {
+	//	loadDDS(texFilePath);
+	//}
+	//else if (ext == "bmp") {
+	//	loadBMP(texFilePath);
+	//}
+	//else {
+	//	throw GraphicsException("Unrecognized texture file extension: " + ext);
+	//}
+}
+
+void Texture::setMinFilter(GLint minFilter) {
+	m_minFilter = minFilter;
+	glTextureParameteri(m_texId, GL_TEXTURE_MIN_FILTER, m_minFilter);
+}
+
+void Texture::setMagFilter(GLint magFilter) {
+	m_magFilter = magFilter;
+	glTextureParameteri(m_texId, GL_TEXTURE_MAG_FILTER, m_magFilter);
+}
+void Texture::setWrapS(GLint wrapS) {
+	m_wrapS = wrapS;
+	glTextureParameteri(m_texId, GL_TEXTURE_WRAP_S, m_wrapS);
+}
+
+void Texture::setWrapT(GLint wrapT) {
+	m_wrapT = wrapT;
+	glTextureParameteri(m_texId, GL_TEXTURE_WRAP_T, m_wrapT);
 }
 
 void Texture::loadBMP(const std::string& texFilePath) {
@@ -59,13 +86,8 @@ void Texture::loadBMP(const std::string& texFilePath) {
 		throw GraphicsException("for now only greyscale images are supported");
 	}
 
-	glGenTextures(1, &m_texId);
 	glBindTexture(GL_TEXTURE_2D, m_texId);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, buf + pixelOffset);
 
@@ -115,13 +137,8 @@ void Texture::loadDDS(const std::string& texFilePath) {
 		throw GraphicsException("Texture format not supported");
 	}
 
-	glGenTextures(1, &m_texId);
 	glBindTexture(GL_TEXTURE_2D, m_texId);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mips - 1);
 
