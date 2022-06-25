@@ -71,7 +71,7 @@ void Texture::loadBMP(const std::string& texFilePath) {
 	}
 
 	uint hdr2Size = *(u32*)(buf + 14);
-	assert(hdr2Size == 40);
+	assert(hdr2Size == 40 || hdr2Size == 124);
 	uint width = *(ushort*)(buf + 18);
 	uint height = *(ushort*)(buf + 22);
 	uint bitsPerPixel = *(ushort*)(buf + 28);

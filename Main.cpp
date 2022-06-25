@@ -21,10 +21,10 @@ int main(int ArgCount, char** Args)
     if (!SDL_WasInit(SDL_INIT_EVERYTHING)) {
         SDL_Init(SDL_INIT_EVERYTHING);
     }
-    int framebuffer_w = 512;
-    int framebuffer_h = 512;
-    int window_w = 512;
-    int window_h = 512;
+    int framebuffer_w = 640;
+    int framebuffer_h = 360;
+    int window_w = 640;
+    int window_h = 360;
     unsigned WindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
@@ -62,6 +62,7 @@ int main(int ArgCount, char** Args)
         ShaderProgram program2("shaders/vert2.vs", "shaders/frag2.fs");
         ShaderProgram hmapProg("shaders/hmap.vs", "shaders/frag2.fs");
         ShaderProgram bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs");
+        ShaderProgram alphatextureProg("shaders/alphatexture.vs", "shaders/alphatexture.fs");
 
 
         GLint prog1PVMLocation = glGetUniformLocation(program.getId(), "PVM");
@@ -110,15 +111,20 @@ int main(int ArgCount, char** Args)
         GLint bumpmapProgNsLocation = glGetUniformLocation(bumpmapProg.getId(), "Ns");
         GLint bumpmapProgHeighfieldLocation = glGetUniformLocation(bumpmapProg.getId(), "heightfield");
 
-        Texture texture;
-        texture.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
-        texture.loadDDS("textures/123456.dds");
-        Texture texture2;
-        texture2.loadBMP("textures/heightmap.bmp");
+        GLint alphatextureProgMLocation = glGetUniformLocation(alphatextureProg.getId(), "M");
+        GLint alphatextureProgSamplerLocation = glGetUniformLocation(alphatextureProg.getId(), "sampler");
+        
+        Texture tex123456;
+        tex123456.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
+        tex123456.loadDDS("textures/123456.dds");
+        Texture texHeightmap;
+        texHeightmap.loadBMP("textures/heightmap.bmp");
         Texture bmapHeightfield;
         bmapHeightfield.setWrapS(GL_MIRRORED_REPEAT);
         bmapHeightfield.setWrapT(GL_MIRRORED_REPEAT);
         bmapHeightfield.loadBMP("textures/heightfield.bmp");
+        Texture texBino;
+        texBino.loadBMP("textures/binoculars.bmp");
 
         Model tree("models/simpletree.obj");
         ModelInstance tree1(&tree);
@@ -136,12 +142,37 @@ int main(int ArgCount, char** Args)
         cyl1.transform(glm::translate(glm::vec3(3.0f, 0.0f, 1.0f)));
         SmokeSystem smoke(10000);
 
+        // alphat mesh
+        float alphatVboData[16] = {
+            -1.0f, 1.0f, 0.0f, 1.0f,
+            -1.0f, -1.0f, 0.0f, 0.0f,
+            1.0f, 1.0f, 1.0f, 1.0f,
+            1.0f, -1.0f, 1.0f, 0.0f
+        };
+        GLuint alphatVao;
+        glGenVertexArrays(1, &alphatVao);
+        glBindVertexArray(alphatVao);
+        GLuint alphatVbo;
+        glGenBuffers(1, &alphatVbo);
+        glBindBuffer(GL_ARRAY_BUFFER, alphatVbo);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(alphatVboData), (void*)alphatVboData, GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+
+        glBindVertexArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+
         Camera cam;
         cam.pos = glm::vec3(0,0,8);
         cam.yaw = glm::radians(180.0f);
         cam.farZ = 100.0f;
 
         bool running = true;
+        bool binoMode = false;
         while (running)
         {
             SDL_GetWindowSize(window, &window_w, &window_h);
@@ -154,6 +185,9 @@ int main(int ArgCount, char** Args)
                     {
                     case SDLK_ESCAPE:
                         running = false;
+                        break;
+                    case SDLK_b:
+                        binoMode = !binoMode;
                         break;
                     default:
                         break;
@@ -201,14 +235,34 @@ int main(int ArgCount, char** Args)
 
             SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
             glViewport(0, 0, framebuffer_w, framebuffer_h);
-            glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+            float aspectRatio = float(framebuffer_w) / float(framebuffer_h);
+            cam.aspect = aspectRatio;
+            glDisable(GL_SCISSOR_TEST);
+            if (binoMode) {
+                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                cam.fovy = glm::radians(18.0f);
+            }
+            else {
+                glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+                cam.fovy = glm::radians(50.0f);
+            }
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
+            if (binoMode) {
+                glEnable(GL_SCISSOR_TEST);
+                glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                GLint scissorX = int(0.05f * framebuffer_w) + 2;
+                GLint scissorY = int((-0.45f * aspectRatio / 2.0f + 0.5f) * framebuffer_h) + 2;
+                GLint scissorW = int(0.9f * framebuffer_w) - 4;
+                GLint scissorH = int(0.45f * aspectRatio * framebuffer_h) - 4;
+                glScissor(scissorX, scissorY, scissorW, scissorH);
+            }
+
             program.use();
             glActiveTexture(GL_TEXTURE0);
-            texture.bind();
+            tex123456.bind();
             glUniform1i(prog1SamplerLocation, 0);
-
             glm::mat4 pvm = cam.getP() * cam.getV() * cube1.getM();
             glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(cube1.getM())));
             glUniformMatrix4fv(prog1PVMLocation, 1, false, glm::value_ptr(pvm));
@@ -256,7 +310,7 @@ int main(int ArgCount, char** Args)
 
             hmapProg.use();
             glActiveTexture(GL_TEXTURE1);
-            texture2.bind();
+            texHeightmap.bind();
             glUniform1i(hmapSamplerLocation, 1);
             glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1,0,0));
             meshM = glm::scale(glm::vec3(10.0f, 1.0f, 10.0f)) * meshM;
@@ -277,6 +331,24 @@ int main(int ArgCount, char** Args)
             smoke.setPV(cam.getP()* cam.getV());
             smoke.tick();
             smoke.draw();
+
+            if (binoMode) {
+                glDisable(GL_DEPTH_TEST);
+                alphatextureProg.use();
+                glBindVertexArray(alphatVao);
+                glActiveTexture(GL_TEXTURE0);
+                texBino.bind();
+                glUniform1i(alphatextureProgSamplerLocation, 0);
+                glm::mat3 binoM(1.0f);
+                binoM[0][0] = 0.9f;
+                binoM[1][1] = 0.45f * aspectRatio;
+                glUniformMatrix3fv(alphatextureProgMLocation, 1, GL_FALSE, glm::value_ptr(binoM));
+                glEnable(GL_BLEND);
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                glBindVertexArray(0);
+                glDisable(GL_BLEND);
+            }   
 
             SDL_GL_SwapWindow(window);
         }
