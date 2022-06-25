@@ -31,8 +31,6 @@ SmokeSystem::SmokeSystem(uint numParticles) :
 		tick();
 	}
 
-	m_PVLoc = glGetUniformLocation(m_prog.getId(), "PV");
-
 	glGenVertexArrays(1, &m_vao);
 	glBindVertexArray(m_vao);
 	glGenBuffers(1, &m_vbo);
@@ -64,7 +62,7 @@ void SmokeSystem::copyParticlesToVbo() {
 void SmokeSystem::draw() {
 	copyParticlesToVbo();
 	m_prog.use();
-	glUniformMatrix4fv(m_PVLoc, 1, GL_FALSE, glm::value_ptr(m_PV));
+	glUniformMatrix4fv(m_prog["PV"], 1, GL_FALSE, glm::value_ptr(m_PV));
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindVertexArray(m_vao);

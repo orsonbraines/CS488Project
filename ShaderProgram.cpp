@@ -46,6 +46,20 @@ ShaderProgram::ShaderProgram(const std::string& vsFilePath, const std::string& f
     glDetachShader(m_programId, fs);
     glDeleteShader(vs);
     glDeleteShader(fs);
+
+    int numUniforms, maxNameLen;
+
+    glGetProgramiv(m_programId, GL_ACTIVE_UNIFORMS, &numUniforms);
+    glGetProgramiv(m_programId, GL_ACTIVE_UNIFORM_MAX_LENGTH, &maxNameLen);
+
+    char *name = new char[maxNameLen + 1];
+    
+    for (int i = 0; i < numUniforms; ++i) {
+        glGetActiveUniformName(m_programId, i, maxNameLen + 1, nullptr, name);
+        m_uniforms[std::string(name)] = i;
+    }
+
+    delete[] name;
 }
 
 ShaderProgram::~ShaderProgram() {
@@ -58,4 +72,12 @@ void ShaderProgram::use() {
 
 GLuint ShaderProgram::getId() const {
 	return m_programId;
+}
+
+GLint ShaderProgram::operator[](const std::string& s) const {
+    auto it = m_uniforms.find(s);
+    if (it == m_uniforms.end()) {
+        return -1;
+    }
+    return it->second;
 }

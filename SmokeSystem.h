@@ -33,7 +33,6 @@ private:
 	uint m_tickNum;
 
 	ShaderProgram m_prog;
-	GLint m_PVLoc;
 	GLuint m_vbo, m_vao;
 	std::vector<float> m_vboData;
 	glm::mat4 m_PV;
