@@ -12,8 +12,10 @@ public:
 	void setMagFilter(GLint magFilter);
 	void setWrapS(GLint wrapS);
 	void setWrapT(GLint wrapT);
+	void setBorderColour(float r, float g, float b, float a);
 	void loadBMP(const std::string& texFilePath);
 	void loadDDS(const std::string& texFilePath);
+	GLuint getId() const { return m_texId; }
 private:
 	GLuint m_texId;
 	GLint m_minFilter;

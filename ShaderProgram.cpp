@@ -37,9 +37,12 @@ ShaderProgram::ShaderProgram(const std::string& vsFilePath, const std::string& f
     glGetProgramiv(m_programId, GL_LINK_STATUS, &res);
 
     if (res == GL_FALSE) {
+        char buf[2048];
+        glGetProgramInfoLog(m_programId, 2048, nullptr, buf);
+
         glDeleteShader(vs);
         glDeleteShader(fs);
-        throw GraphicsException("Something went wrong linking the shader program");
+        throw GraphicsException("link error: " + std::string(buf));
     }
 
     glDetachShader(m_programId, vs);

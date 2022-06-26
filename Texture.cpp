@@ -48,6 +48,11 @@ void Texture::setWrapT(GLint wrapT) {
 	glTextureParameteri(m_texId, GL_TEXTURE_WRAP_T, m_wrapT);
 }
 
+void Texture::setBorderColour(float r, float g, float b, float a) {
+	float bc[4] = {r,g,b,a};
+	glTextureParameterfv(m_texId, GL_TEXTURE_BORDER_COLOR, bc);
+}
+
 void Texture::loadBMP(const std::string& texFilePath) {
 	std::ifstream in(texFilePath, std::ios_base::binary);
 	if (!in) {
