@@ -28,9 +28,12 @@ int main(int ArgCount, char** Args)
     SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetSwapInterval(1);
     SDL_Window* window = SDL_CreateWindow("SDL OpenGL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, WindowFlags);
     assert(window);
     SDL_GLContext context = SDL_GL_CreateContext(window);
@@ -85,7 +88,7 @@ int main(int ArgCount, char** Args)
                     float dx = float(e.motion.xrel);
                     float dy = float(e.motion.yrel);
                     scene.m_cam.yaw -= dx / float(window_w) * glm::radians(180.0f);
-                    scene.m_cam.pitch += dy / float(window_h) * glm::radians(90.0f);
+                    scene.m_cam.pitch -= dy / float(window_h) * glm::radians(90.0f);
                 }
             }
 
@@ -93,9 +96,10 @@ int main(int ArgCount, char** Args)
                 int numkeys;
                 const Uint8* keystate = SDL_GetKeyboardState(&numkeys);
                 assert(numkeys > SDL_SCANCODE_W);
-                glm::vec3 forward = scene.m_cam.getViewDir();
-                glm::vec3 right = glm::normalize(glm::cross(forward, glm::vec3(0,1,0)));
-                glm::vec3 up = glm::normalize(glm::cross(right, forward));
+                glm::mat3 dirs(scene.m_cam.getVInv());
+                glm::vec3 forward = -dirs[2];
+                glm::vec3 right = dirs[0];
+                glm::vec3 up = dirs[1];
                 if (keystate[SDL_SCANCODE_W]) {
                     scene.m_cam.pos += 0.03f * forward;
                 }

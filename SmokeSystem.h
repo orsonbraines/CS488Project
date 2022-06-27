@@ -20,6 +20,7 @@ public:
 	void tick();
 	void initParticle(SmokeParticle &p);
 	void setPV(const glm::mat4& PV) { m_PV = PV; }
+	void setVinv(const glm::mat4& Vinv) { m_Vinv = Vinv; }
 	void draw();
 private:
 	void copyParticlesToVbo();
@@ -33,7 +34,7 @@ private:
 	uint m_tickNum;
 
 	ShaderProgram m_prog;
-	GLuint m_vbo, m_vao;
+	GLuint m_staticVbo, m_dynamicVbo, m_vao;
 	std::vector<float> m_vboData;
-	glm::mat4 m_PV;
+	glm::mat4 m_PV, m_Vinv;
 };

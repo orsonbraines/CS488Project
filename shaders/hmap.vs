@@ -5,6 +5,7 @@ layout(location = 0) in vec2 pos;
 out vec3 fs_normal;
 out vec3 fs_eye;
 out vec4 fs_sunSpacePos;
+out vec3 fs_fl;
 
 uniform sampler2D sampler;
 uniform mat4 camPVM;
@@ -13,6 +14,7 @@ uniform mat4 M;
 
 uniform mat3 normalMatrix;
 uniform vec3 vs_eye;
+uniform vec3 flPos;
 
 void main() {
 	float z = texture(sampler, pos).r;
@@ -25,4 +27,5 @@ void main() {
 	fs_normal = normalMatrix * cross(vec3(1, 0, dzdx), vec3(0, 1, dzdy));
 	fs_eye = vs_eye - vec3(M * vec4(pos.x, pos.y, z, 1.0));
 	fs_sunSpacePos = sunPVM * vec4(pos.x, pos.y, z, 1.0);
+	fs_fl = flPos - vec3(M * vec4(pos.x, pos.y, z, 1.0));
 }

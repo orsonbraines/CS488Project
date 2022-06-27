@@ -7,7 +7,7 @@ Camera::Camera() : pos(0.0f), pitch(0.0f), yaw(0.0f), nearZ(0.1f), farZ(10.0f), 
 }
 
 glm::mat4 Camera::getV() {
-	return glm::lookAt(pos, pos + getViewDir(), glm::vec3(0,1,0));
+	return glm::rotate(-pitch, glm::vec3(1, 0, 0)) * glm::rotate(-yaw, glm::vec3(0, 1, 0)) * glm::translate(-pos);
 }
 
 glm::mat4 Camera::getP() {
@@ -15,9 +15,9 @@ glm::mat4 Camera::getP() {
 }
 
 glm::mat4 Camera::getVInv() {
-	return glm::inverse(getV());
+	return glm::translate(pos) * glm::rotate(yaw, glm::vec3(0, 1, 0)) * glm::rotate(pitch, glm::vec3(1, 0, 0));
 }
 
 glm::vec3 Camera::getViewDir() {
-	return glm::vec3(glm::rotate(yaw, glm::vec3(0, 1, 0)) * glm::rotate(pitch, glm::vec3(1,0,0)) * glm::vec4(0, 0, 1, 0));
+	return -glm::vec3(getVInv()[3]);
 }

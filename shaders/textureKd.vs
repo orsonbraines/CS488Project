@@ -7,15 +7,21 @@ layout(location = 2) in vec2 vs_uv;
 out vec3 fs_normal;
 out vec3 fs_eye;
 out vec2 fs_uv;
+out vec4 fs_sunSpacePos;
+out vec3 fs_fl;
 
-uniform mat4 PVM;
+uniform mat4 sunPVM;
+uniform mat4 camPVM;
 uniform mat4 M;
 uniform mat3 normalMatrix;
 uniform vec3 vs_eye;
+uniform vec3 flPos;
 
 void main() {
-	gl_Position =  PVM * vec4(pos, 1.0);
+	gl_Position =  camPVM * vec4(pos, 1.0);
 	fs_normal = normalMatrix * vs_normal;
 	fs_eye = vs_eye - vec3(M * vec4(pos, 1.0));
 	fs_uv = vs_uv;
+	fs_sunSpacePos = sunPVM * vec4(pos, 1.0);
+	fs_fl = flPos - vec3(M * vec4(pos, 1.0));
 }

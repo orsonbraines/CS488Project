@@ -18,7 +18,7 @@ Scene::Scene() :
 	m_cylinder(),
 	m_cyl1(&m_cylinder),
 	m_gridMesh(128,128),
-	m_smoke(5000),
+	m_smoke(15000),
     m_binoMode(false),
     m_defaultFboW(0),
     m_defaultFboH(0),
@@ -37,7 +37,7 @@ Scene::Scene() :
 	m_tree1.transform(glm::scale(glm::vec3(0.5f, 1.0f, 0.5f)));
 	m_tree1.transform(glm::translate(glm::vec3(2.0f, 0.0f, -2.0f)));
 	m_cube1.transform(glm::scale(glm::vec3(0.5f, 0.5f, 0.5f)));
-	m_cube1.transform(glm::translate(glm::vec3(-0.5f, 0.5f, 0.5f)));
+	m_cube1.transform(glm::translate(glm::vec3(4.0f, 1.0f, 0.0f)));
 	m_cyl1.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)));
 	m_cyl1.transform(glm::scale(glm::vec3(0.3f, 4.0f, 0.3f)));
 	m_cyl1.transform(glm::translate(glm::vec3(3.0f, -0.2f, 1.0f)));
@@ -66,7 +66,7 @@ Scene::Scene() :
 
 	// init camera pos
 	m_cam.pos = glm::vec3(0, 0, 8);
-	m_cam.yaw = glm::radians(180.0f);
+	//m_cam.yaw = glm::radians(180.0f);
 	m_cam.farZ = 100.0f;
 
     // Allocate the shadow map
@@ -109,7 +109,8 @@ void Scene::render() {
         m_cam.fovy = glm::radians(18.0f);
     }
     else {
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        //glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         m_cam.fovy = glm::radians(50.0f);
     }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -128,6 +129,7 @@ void Scene::render() {
     renderObjects(m_cam.getP(), m_cam.getV(), false);
 
     m_smoke.setPV(m_cam.getP() * m_cam.getV());
+    m_smoke.setVinv(m_cam.getVInv());
     m_smoke.tick();
     glDepthMask(GL_FALSE); // smoke should not overwrite the depth buffer
     m_smoke.draw();
@@ -164,15 +166,25 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         glActiveTexture(GL_TEXTURE0);
         m_tex123456.bind();
         glUniform1i(m_textureKdProg["sampler"], 0);
+        glActiveTexture(GL_TEXTURE1);
+        m_texShadowMap.bind();
+        glUniform1i(m_textureKdProg["shadow"], 1);
         glm::mat4 pvm = PV * m_cube1.getM();
         glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(m_cube1.getM())));
-        glUniformMatrix4fv(m_textureKdProg["PVM"], 1, false, glm::value_ptr(pvm));
+        glUniformMatrix4fv(m_textureKdProg["camPVM"], 1, false, glm::value_ptr(pvm));
+        glUniformMatrix4fv(m_textureKdProg["sunPVM"], 1, false, glm::value_ptr(sunPV * m_cube1.getM()));
         glUniformMatrix4fv(m_textureKdProg["M"], 1, false, glm::value_ptr(m_cube1.getM()));
         glUniformMatrix3fv(m_textureKdProg["normalMatrix"], 1, false, glm::value_ptr(normMat));
-        glUniform3fv(m_textureKdProg["lightDir"], 1, glm::value_ptr(sunDir));
-        glUniform3f(m_textureKdProg["ambientColour"], 0.5f, 0.5f, 0.5f);
-        glUniform3f(m_textureKdProg["lightColour"], 0.5f, 0.0f, 0.0f);
+        glUniform3fv(m_textureKdProg["sunlightDir"], 1, glm::value_ptr(sunDir));
+        //glUniform3f(m_textureKdProg["ambientColour"], 0.5f, 0.5f, 0.5f);
+        glUniform3f(m_textureKdProg["ambientColour"], 0.0f, 0.0f, 0.0f);
+        glUniform3f(m_textureKdProg["sunlightColour"], 0.5f, 0.0f, 0.0f);
         glUniform3fv(m_textureKdProg["vs_eye"], 1, glm::value_ptr(m_cam.pos));
+        glUniform3fv(m_textureKdProg["flPos"], 1, glm::value_ptr(m_cam.pos));
+        glUniform3fv(m_textureKdProg["flDir"], 1, glm::value_ptr(m_cam.getVInv()[2]));
+        glUniform3f(m_textureKdProg["flColour"], 1.0f, 1.0f, 1.0f);
+        glUniform1f(m_textureKdProg["flSoftCutoff"], glm::cos(glm::radians(20.0f)));
+        glUniform1f(m_textureKdProg["flHardCutoff"], glm::cos(glm::radians(30.0f)));
         m_cube1.setUniformLocations(-1, m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
     }
     m_cube1.draw();
@@ -192,10 +204,17 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         glUniform1i(m_constantKdProg["shadow"], 0);
         glUniformMatrix4fv(m_constantKdProg["M"], 1, false, glm::value_ptr(m_tree1.getM()));
         glUniformMatrix3fv(m_constantKdProg["normalMatrix"], 1, false, glm::value_ptr(normMat));
-        glUniform3fv(m_constantKdProg["lightDir"], 1, glm::value_ptr(sunDir));
-        glUniform3f(m_constantKdProg["ambientColour"], 0.5f, 0.5f, 0.5f);
-        glUniform3f(m_constantKdProg["lightColour"], 1.0f, 1.0f, 1.0f);
+        glUniform3fv(m_constantKdProg["sunlightDir"], 1, glm::value_ptr(sunDir));
+        //glUniform3f(m_constantKdProg["ambientColour"], 0.5f, 0.5f, 0.5f);
+        glUniform3f(m_constantKdProg["ambientColour"], 0.0f, 0.0f, 0.0f);
+        glUniform3f(m_constantKdProg["sunlightColour"], 1.0f, 1.0f, 1.0f);
         glUniform3fv(m_constantKdProg["vs_eye"], 1, glm::value_ptr(m_cam.pos));
+        glUniform3fv(m_constantKdProg["flPos"], 1, glm::value_ptr(m_cam.pos));
+        glUniform3fv(m_constantKdProg["flDir"], 1, glm::value_ptr(m_cam.getVInv()[2]));
+        glUniform3f(m_constantKdProg["flColour"], 1.0f, 1.0f, 1.0f);
+        glUniform1f(m_constantKdProg["flSoftCutoff"], glm::cos(glm::radians(20.0f)));
+        glUniform1f(m_constantKdProg["flHardCutoff"], glm::cos(glm::radians(30.0f)));
+
         m_tree1.setUniformLocations(m_constantKdProg["Kd"], m_constantKdProg["Ks"], m_constantKdProg["Ns"]);
     }
     m_tree1.draw();
@@ -207,16 +226,26 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         m_bumpmapProg.use();
         glm::mat4 pvm = PV * m_cyl1.getM();
         glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(m_cyl1.getM())));
-        glUniformMatrix4fv(m_bumpmapProg["PVM"], 1, false, glm::value_ptr(pvm));
+        glUniformMatrix4fv(m_bumpmapProg["camPVM"], 1, false, glm::value_ptr(pvm));
+        glUniformMatrix4fv(m_bumpmapProg["sunPVM"], 1, false, glm::value_ptr(sunPV * m_cyl1.getM()));
         glUniformMatrix4fv(m_bumpmapProg["M"], 1, false, glm::value_ptr(m_cyl1.getM()));
         glUniformMatrix3fv(m_bumpmapProg["normalMatrix"], 1, false, glm::value_ptr(normMat));
         glUniform3f(m_bumpmapProg["Ks"], 0, 0, 0);
         glUniform1f(m_bumpmapProg["Ns"], 0);
         glUniform3f(m_bumpmapProg["Kd"], 0.329826f, 0.060918f, 0.008916f);
-        glUniform3fv(m_bumpmapProg["lightDir"], 1, glm::value_ptr(sunDir));
-        glUniform3f(m_bumpmapProg["ambientColour"], 0.5f, 0.5f, 0.5f);
-        glUniform3f(m_bumpmapProg["lightColour"], 1.0f, 1.0f, 1.0f);
+        glUniform3fv(m_bumpmapProg["sunlightDir"], 1, glm::value_ptr(sunDir));
+        //glUniform3f(m_bumpmapProg["ambientColour"], 0.5f, 0.5f, 0.5f);
+        glUniform3f(m_bumpmapProg["ambientColour"], 0.0f, 0.0f, 0.0f);
+        glUniform3f(m_bumpmapProg["sunlightColour"], 1.0f, 1.0f, 1.0f);
         glUniform3fv(m_bumpmapProg["vs_eye"], 1, glm::value_ptr(m_cam.pos));
+        glUniform3fv(m_bumpmapProg["flPos"], 1, glm::value_ptr(m_cam.pos));
+        glUniform3fv(m_bumpmapProg["flDir"], 1, glm::value_ptr(m_cam.getVInv()[2]));
+        glUniform3f(m_bumpmapProg["flColour"], 1.0f, 1.0f, 1.0f);
+        glUniform1f(m_bumpmapProg["flSoftCutoff"], glm::cos(glm::radians(20.0f)));
+        glUniform1f(m_bumpmapProg["flHardCutoff"], glm::cos(glm::radians(30.0f)));
+        glActiveTexture(GL_TEXTURE0);
+        m_texShadowMap.bind();
+        glUniform1i(m_bumpmapProg["shadow"], 0);
         glActiveTexture(GL_TEXTURE1);
         m_texBmapHeightfield.bind();
         glUniform1i(m_bumpmapProg["heightfield"], 1);
@@ -238,13 +267,19 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         glUniformMatrix4fv(m_hmapProg["sunPVM"], 1, false, glm::value_ptr(sunPV * meshM));
         glUniformMatrix4fv(m_hmapProg["M"], 1, false, glm::value_ptr(meshM));
         glUniformMatrix3fv(m_hmapProg["normalMatrix"], 1, false, glm::value_ptr(normMat));
-        glUniform3fv(m_hmapProg["lightDir"], 1, glm::value_ptr(sunDir));
-        glUniform3f(m_hmapProg["ambientColour"], 0.5f, 0.5f, 0.5f);
-        glUniform3f(m_hmapProg["lightColour"], 1.0f, 1.0f, 1.0f);
+        glUniform3fv(m_hmapProg["sunlightDir"], 1, glm::value_ptr(sunDir));
+        //glUniform3f(m_hmapProg["ambientColour"], 0.5f, 0.5f, 0.5f);
+        glUniform3f(m_hmapProg["ambientColour"], 0.0f, 0.0f, 0.0f);
+        glUniform3f(m_hmapProg["sunlightColour"], 1.0f, 1.0f, 1.0f);
         glUniform3fv(m_hmapProg["vs_eye"], 1, glm::value_ptr(m_cam.pos));
         glUniform3f(m_hmapProg["Ks"], 0, 0, 0);
         glUniform1f(m_hmapProg["Ns"], 0);
         glUniform3f(m_hmapProg["Kd"], 0.0f, 0.5f, 0.0f);
+        glUniform3fv(m_hmapProg["flPos"], 1, glm::value_ptr(m_cam.pos));
+        glUniform3fv(m_hmapProg["flDir"], 1, glm::value_ptr(m_cam.getVInv()[2]));
+        glUniform3f(m_hmapProg["flColour"], 1.0f, 1.0f, 1.0f);
+        glUniform1f(m_hmapProg["flSoftCutoff"], glm::cos(glm::radians(20.0f)));
+        glUniform1f(m_hmapProg["flHardCutoff"], glm::cos(glm::radians(30.0f)));
         if (!isShadow) {
             glActiveTexture(GL_TEXTURE0);
             m_texShadowMap.bind();
