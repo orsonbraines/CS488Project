@@ -129,7 +129,7 @@ void Scene::render() {
 
     m_smoke.setPV(m_cam.getP() * m_cam.getV());
     m_smoke.tick();
-    glDepthMask(GL_FALSE);
+    glDepthMask(GL_FALSE); // smoke should not overwrite the depth buffer
     m_smoke.draw();
     glDepthMask(GL_TRUE);
 
