@@ -6,7 +6,7 @@ in vec2 fs_uv;
 in vec3 fs_udir;
 in vec3 fs_vdir;
 
-out vec3 colour;
+out vec4 colour_out;
 
 uniform sampler2D heightfield;
 
@@ -19,7 +19,7 @@ uniform vec3 Ks;
 uniform float Ns;
 
 void main() {
-	colour = ambientColour * Kd;
+	vec3 colour = ambientColour * Kd;
 	vec3 n = normalize(fs_normal);
 	vec3 l = normalize(lightDir);
 
@@ -38,5 +38,5 @@ void main() {
 		colour += pow(intensity, Ns) * lightColour * Ks;
 	}
 	
-	//colour = texture(heightfield, fs_uv).rrr;
+	colour_out = vec4(colour, 1.0);
 }

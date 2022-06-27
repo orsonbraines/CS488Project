@@ -4,7 +4,7 @@ in vec3 fs_normal;
 in vec3 fs_eye;
 in vec2 fs_uv;
 
-out vec3 colour;
+out vec4 colour_out;
 
 uniform sampler2D sampler;
 
@@ -17,7 +17,7 @@ uniform float Ns;
 
 void main() {
 	vec3 Kd = texture(sampler, vec2(fs_uv.s, 1.0 - fs_uv.t)).rgb;
-	colour = ambientColour * Kd;
+	vec3 colour = ambientColour * Kd;
 	vec3 n = normalize(fs_normal);
 	vec3 l = normalize(lightDir);
 	float intensity = dot(n, l);
@@ -30,4 +30,6 @@ void main() {
 	if(intensity > 0.0) {
 		colour += pow(intensity, Ns) * lightColour * Ks;
 	}
+
+	colour_out = vec4(colour, 1.0);
 }

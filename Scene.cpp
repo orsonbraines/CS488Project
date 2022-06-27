@@ -18,7 +18,7 @@ Scene::Scene() :
 	m_cylinder(),
 	m_cyl1(&m_cylinder),
 	m_gridMesh(128,128),
-	m_smoke(10000),
+	m_smoke(5000),
     m_binoMode(false),
     m_defaultFboW(0),
     m_defaultFboH(0),
@@ -89,12 +89,14 @@ Scene::~Scene() {
 }
 
 void Scene::render() {
-    m_sun.setTheta(m_sun.getTheta() + 0.001f);
+    m_sun.setTheta(m_sun.getTheta() + 0.0001f);
 
     glDisable(GL_SCISSOR_TEST);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBindFramebuffer(GL_FRAMEBUFFER, m_shadowMapFbo);
     glViewport(0, 0, m_shadowTextureSize, m_shadowTextureSize);
     glClear(GL_DEPTH_BUFFER_BIT);
@@ -127,7 +129,9 @@ void Scene::render() {
 
     m_smoke.setPV(m_cam.getP() * m_cam.getV());
     m_smoke.tick();
+    glDepthMask(GL_FALSE);
     m_smoke.draw();
+    glDepthMask(GL_TRUE);
 
     if (m_binoMode) {
         glDisable(GL_DEPTH_TEST);
@@ -140,11 +144,8 @@ void Scene::render() {
         binoM[0][0] = 1.0f;
         binoM[1][1] = 0.5f * m_cam.aspect;
         glUniformMatrix3fv(m_alphatextureProg["M"], 1, GL_FALSE, glm::value_ptr(binoM));
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindVertexArray(0);
-        glDisable(GL_BLEND);
     }
 }
 

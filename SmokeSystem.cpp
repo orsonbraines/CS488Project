@@ -53,7 +53,7 @@ void SmokeSystem::copyParticlesToVbo() {
 		m_vboData[4 * i] = m_particles[i].pos.x;
 		m_vboData[4 * i + 1] = m_particles[i].pos.y;
 		m_vboData[4 * i + 2] = m_particles[i].pos.z;
-		m_vboData[4 * i + 3] = 0.3f * (1.0f - float(m_particles[i].age) / float(m_maxAge));
+		m_vboData[4 * i + 3] = 0.05f * (1.0f - float(m_particles[i].age) / float(m_maxAge));
 	}
 
 	glNamedBufferSubData(m_vbo, 0, m_vboData.size() * sizeof(float), (void*)m_vboData.data());
@@ -63,15 +63,12 @@ void SmokeSystem::draw() {
 	copyParticlesToVbo();
 	m_prog.use();
 	glUniformMatrix4fv(m_prog["PV"], 1, GL_FALSE, glm::value_ptr(m_PV));
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBindVertexArray(m_vao);
 
 	glPointSize(10);
 	glDrawArrays(GL_POINTS, 0, m_particles.size());
 
 	glBindVertexArray(0);
-	glDisable(GL_BLEND);
 }
 
 SmokeSystem::~SmokeSystem() {
