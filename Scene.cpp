@@ -5,6 +5,7 @@
 #include "Scene.h"
 
 Scene::Scene() :
+    m_flashlight(m_cam),
     m_textureKdProg("shaders/textureKd.vs", "shaders/textureKd.fs"),
     m_constantKdProg("shaders/constantKd.vs", "shaders/constantKd.fs"),
     m_hmapProg("shaders/hmap.vs", "shaders/constantKd.fs"),
@@ -65,9 +66,9 @@ Scene::Scene() :
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// init camera pos
-	m_cam.pos = glm::vec3(0, 0, 8);
+	m_cam.m_pos = glm::vec3(0, 0, 8);
 	//m_cam.yaw = glm::radians(180.0f);
-	m_cam.farZ = 100.0f;
+	m_cam.m_farZ = 100.0f;
 
     // Allocate the shadow map
     glTextureStorage2D(m_texShadowMap.getId(), 1, GL_DEPTH_COMPONENT32, m_shadowTextureSize, m_shadowTextureSize);
@@ -100,18 +101,18 @@ void Scene::render() {
     glBindFramebuffer(GL_FRAMEBUFFER, m_shadowMapFbo);
     glViewport(0, 0, m_shadowTextureSize, m_shadowTextureSize);
     glClear(GL_DEPTH_BUFFER_BIT);
-    renderObjects(m_sun.getP(), m_sun.getV(m_cam.pos), true);
+    renderObjects(m_sun.getP(), m_sun.getV(m_cam.m_pos), true);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, m_defaultFboW, m_defaultFboH);
     if (m_binoMode) {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        m_cam.fovy = glm::radians(18.0f);
+        m_cam.m_fovy = glm::radians(18.0f);
     }
     else {
         //glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        m_cam.fovy = glm::radians(50.0f);
+        m_cam.m_fovy = glm::radians(50.0f);
     }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
@@ -120,9 +121,9 @@ void Scene::render() {
         glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         GLint scissorX = 0;
-        GLint scissorY = int((-0.5f * m_cam.aspect / 2.0f + 0.5f) * m_defaultFboH) + 2;
+        GLint scissorY = int((-0.5f * m_cam.m_aspect / 2.0f + 0.5f) * m_defaultFboH) + 2;
         GLint scissorW = m_defaultFboW;
-        GLint scissorH = int(0.5f * m_cam.aspect * m_defaultFboH) - 4;
+        GLint scissorH = int(0.5f * m_cam.m_aspect * m_defaultFboH) - 4;
         glScissor(scissorX, scissorY, scissorW, scissorH);
     }
 
@@ -144,7 +145,7 @@ void Scene::render() {
         glUniform1i(m_alphatextureProg["sampler"], 0);
         glm::mat3 binoM(1.0f);
         binoM[0][0] = 1.0f;
-        binoM[1][1] = 0.5f * m_cam.aspect;
+        binoM[1][1] = 0.5f * m_cam.m_aspect;
         glUniformMatrix3fv(m_alphatextureProg["M"], 1, GL_FALSE, glm::value_ptr(binoM));
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindVertexArray(0);
@@ -154,7 +155,7 @@ void Scene::render() {
 void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow) {
     glm::vec3 sunDir = m_sun.getLightDir();
     glm::mat4 PV = P * V;
-    glm::mat4 sunPV = m_sun.getP() * m_sun.getV(m_cam.pos);
+    glm::mat4 sunPV = m_sun.getP() * m_sun.getV(m_cam.m_pos);
 
     if (isShadow) {
         m_shadowProg.use();
@@ -179,12 +180,12 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         //glUniform3f(m_textureKdProg["ambientColour"], 0.5f, 0.5f, 0.5f);
         glUniform3f(m_textureKdProg["ambientColour"], 0.0f, 0.0f, 0.0f);
         glUniform3f(m_textureKdProg["sunlightColour"], 0.5f, 0.0f, 0.0f);
-        glUniform3fv(m_textureKdProg["vs_eye"], 1, glm::value_ptr(m_cam.pos));
-        glUniform3fv(m_textureKdProg["flPos"], 1, glm::value_ptr(m_cam.pos));
-        glUniform3fv(m_textureKdProg["flDir"], 1, glm::value_ptr(m_cam.getVInv()[2]));
-        glUniform3f(m_textureKdProg["flColour"], 1.0f, 1.0f, 1.0f);
-        glUniform1f(m_textureKdProg["flSoftCutoff"], glm::cos(glm::radians(20.0f)));
-        glUniform1f(m_textureKdProg["flHardCutoff"], glm::cos(glm::radians(30.0f)));
+        glUniform3fv(m_textureKdProg["vs_eye"], 1, glm::value_ptr(m_cam.m_pos));
+        glUniform3fv(m_textureKdProg["flPos"], 1, glm::value_ptr(m_flashlight.getPos()));
+        glUniform3fv(m_textureKdProg["flDir"], 1, glm::value_ptr(m_flashlight.getDir()));
+        glUniform3fv(m_textureKdProg["flColour"], 1, glm::value_ptr(m_flashlight.getColour()));
+        glUniform1f(m_textureKdProg["flSoftCutoff"], m_flashlight.getSoftCutoff());
+        glUniform1f(m_textureKdProg["flHardCutoff"], m_flashlight.getHardCutoff());
         m_cube1.setUniformLocations(-1, m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
     }
     m_cube1.draw();
@@ -208,13 +209,12 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         //glUniform3f(m_constantKdProg["ambientColour"], 0.5f, 0.5f, 0.5f);
         glUniform3f(m_constantKdProg["ambientColour"], 0.0f, 0.0f, 0.0f);
         glUniform3f(m_constantKdProg["sunlightColour"], 1.0f, 1.0f, 1.0f);
-        glUniform3fv(m_constantKdProg["vs_eye"], 1, glm::value_ptr(m_cam.pos));
-        glUniform3fv(m_constantKdProg["flPos"], 1, glm::value_ptr(m_cam.pos));
-        glUniform3fv(m_constantKdProg["flDir"], 1, glm::value_ptr(m_cam.getVInv()[2]));
-        glUniform3f(m_constantKdProg["flColour"], 1.0f, 1.0f, 1.0f);
-        glUniform1f(m_constantKdProg["flSoftCutoff"], glm::cos(glm::radians(20.0f)));
-        glUniform1f(m_constantKdProg["flHardCutoff"], glm::cos(glm::radians(30.0f)));
-
+        glUniform3fv(m_constantKdProg["vs_eye"], 1, glm::value_ptr(m_cam.m_pos));
+        glUniform3fv(m_constantKdProg["flPos"], 1, glm::value_ptr(m_flashlight.getPos()));
+        glUniform3fv(m_constantKdProg["flDir"], 1, glm::value_ptr(m_flashlight.getDir()));
+        glUniform3fv(m_constantKdProg["flColour"], 1, glm::value_ptr(m_flashlight.getColour()));
+        glUniform1f(m_constantKdProg["flSoftCutoff"], m_flashlight.getSoftCutoff());
+        glUniform1f(m_constantKdProg["flHardCutoff"], m_flashlight.getHardCutoff());
         m_tree1.setUniformLocations(m_constantKdProg["Kd"], m_constantKdProg["Ks"], m_constantKdProg["Ns"]);
     }
     m_tree1.draw();
@@ -237,12 +237,12 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         //glUniform3f(m_bumpmapProg["ambientColour"], 0.5f, 0.5f, 0.5f);
         glUniform3f(m_bumpmapProg["ambientColour"], 0.0f, 0.0f, 0.0f);
         glUniform3f(m_bumpmapProg["sunlightColour"], 1.0f, 1.0f, 1.0f);
-        glUniform3fv(m_bumpmapProg["vs_eye"], 1, glm::value_ptr(m_cam.pos));
-        glUniform3fv(m_bumpmapProg["flPos"], 1, glm::value_ptr(m_cam.pos));
-        glUniform3fv(m_bumpmapProg["flDir"], 1, glm::value_ptr(m_cam.getVInv()[2]));
-        glUniform3f(m_bumpmapProg["flColour"], 1.0f, 1.0f, 1.0f);
-        glUniform1f(m_bumpmapProg["flSoftCutoff"], glm::cos(glm::radians(20.0f)));
-        glUniform1f(m_bumpmapProg["flHardCutoff"], glm::cos(glm::radians(30.0f)));
+        glUniform3fv(m_bumpmapProg["vs_eye"], 1, glm::value_ptr(m_cam.m_pos));
+        glUniform3fv(m_bumpmapProg["flPos"], 1, glm::value_ptr(m_flashlight.getPos()));
+        glUniform3fv(m_bumpmapProg["flDir"], 1, glm::value_ptr(m_flashlight.getDir()));
+        glUniform3fv(m_bumpmapProg["flColour"], 1, glm::value_ptr(m_flashlight.getColour()));
+        glUniform1f(m_bumpmapProg["flSoftCutoff"], m_flashlight.getSoftCutoff());
+        glUniform1f(m_bumpmapProg["flHardCutoff"], m_flashlight.getHardCutoff());
         glActiveTexture(GL_TEXTURE0);
         m_texShadowMap.bind();
         glUniform1i(m_bumpmapProg["shadow"], 0);
@@ -271,15 +271,15 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         //glUniform3f(m_hmapProg["ambientColour"], 0.5f, 0.5f, 0.5f);
         glUniform3f(m_hmapProg["ambientColour"], 0.0f, 0.0f, 0.0f);
         glUniform3f(m_hmapProg["sunlightColour"], 1.0f, 1.0f, 1.0f);
-        glUniform3fv(m_hmapProg["vs_eye"], 1, glm::value_ptr(m_cam.pos));
+        glUniform3fv(m_hmapProg["vs_eye"], 1, glm::value_ptr(m_cam.m_pos));
         glUniform3f(m_hmapProg["Ks"], 0, 0, 0);
         glUniform1f(m_hmapProg["Ns"], 0);
         glUniform3f(m_hmapProg["Kd"], 0.0f, 0.5f, 0.0f);
-        glUniform3fv(m_hmapProg["flPos"], 1, glm::value_ptr(m_cam.pos));
-        glUniform3fv(m_hmapProg["flDir"], 1, glm::value_ptr(m_cam.getVInv()[2]));
-        glUniform3f(m_hmapProg["flColour"], 1.0f, 1.0f, 1.0f);
-        glUniform1f(m_hmapProg["flSoftCutoff"], glm::cos(glm::radians(20.0f)));
-        glUniform1f(m_hmapProg["flHardCutoff"], glm::cos(glm::radians(30.0f)));
+        glUniform3fv(m_hmapProg["flPos"], 1, glm::value_ptr(m_flashlight.getPos()));
+        glUniform3fv(m_hmapProg["flDir"], 1, glm::value_ptr(m_flashlight.getDir()));
+        glUniform3fv(m_hmapProg["flColour"], 1, glm::value_ptr(m_flashlight.getColour()));
+        glUniform1f(m_hmapProg["flSoftCutoff"], m_flashlight.getSoftCutoff());
+        glUniform1f(m_hmapProg["flHardCutoff"], m_flashlight.getHardCutoff());
         if (!isShadow) {
             glActiveTexture(GL_TEXTURE0);
             m_texShadowMap.bind();

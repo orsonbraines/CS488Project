@@ -87,8 +87,8 @@ int main(int ArgCount, char** Args)
                 else if (e.type == SDL_MOUSEMOTION) {
                     float dx = float(e.motion.xrel);
                     float dy = float(e.motion.yrel);
-                    scene.m_cam.yaw -= dx / float(window_w) * glm::radians(180.0f);
-                    scene.m_cam.pitch -= dy / float(window_h) * glm::radians(90.0f);
+                    scene.m_cam.m_yaw -= dx / float(window_w) * glm::radians(180.0f);
+                    scene.m_cam.m_pitch -= dy / float(window_h) * glm::radians(90.0f);
                 }
             }
 
@@ -101,22 +101,34 @@ int main(int ArgCount, char** Args)
                 glm::vec3 right = dirs[0];
                 glm::vec3 up = dirs[1];
                 if (keystate[SDL_SCANCODE_W]) {
-                    scene.m_cam.pos += 0.03f * forward;
+                    scene.m_cam.m_pos += 0.03f * forward;
                 }
                 if (keystate[SDL_SCANCODE_S]) {
-                    scene.m_cam.pos -= 0.03f * forward;
+                    scene.m_cam.m_pos -= 0.03f * forward;
                 }
                 if (keystate[SDL_SCANCODE_A]) {
-                    scene.m_cam.pos -= 0.03f * right;
+                    scene.m_cam.m_pos -= 0.03f * right;
                 }
                 if (keystate[SDL_SCANCODE_D]) {
-                    scene.m_cam.pos += 0.03f * right;
+                    scene.m_cam.m_pos += 0.03f * right;
                 }
                 if (keystate[SDL_SCANCODE_E]) {
-                    scene.m_cam.pos += 0.03f * up;
+                    scene.m_cam.m_pos += 0.03f * up;
                 }
                 if (keystate[SDL_SCANCODE_Q]) {
-                    scene.m_cam.pos -= 0.03f * up;
+                    scene.m_cam.m_pos -= 0.03f * up;
+                }
+                if (keystate[SDL_SCANCODE_RIGHT]) {
+                    scene.getFlashlight().changeAngle(-0.01f, 0.0f);
+                }
+                if (keystate[SDL_SCANCODE_LEFT]) {
+                    scene.getFlashlight().changeAngle(0.01f, 0.0f);
+                }
+                if (keystate[SDL_SCANCODE_UP]) {
+                    scene.getFlashlight().changeAngle(0.0f, 0.01f);
+                }
+                if (keystate[SDL_SCANCODE_DOWN]) {
+                    scene.getFlashlight().changeAngle(0.0f, -0.01f);
                 }
             }
 
@@ -124,7 +136,7 @@ int main(int ArgCount, char** Args)
             SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
             glViewport(0, 0, framebuffer_w, framebuffer_h);
             float aspectRatio = float(framebuffer_w) / float(framebuffer_h);
-            scene.m_cam.aspect = aspectRatio;
+            scene.m_cam.m_aspect = aspectRatio;
             scene.m_defaultFboW = framebuffer_w;
             scene.m_defaultFboH = framebuffer_h;
             

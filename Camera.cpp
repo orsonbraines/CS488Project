@@ -2,20 +2,24 @@
 
 #include <glm/gtx/transform.hpp>
 
-Camera::Camera() : pos(0.0f), pitch(0.0f), yaw(0.0f), nearZ(0.1f), farZ(10.0f), fovy(glm::radians(50.0f)), aspect(1.0) {
-
-}
+Camera::Camera() :  m_pos(0.0f), 
+					m_pitch(0.0f), 
+					m_yaw(0.0f), 
+					m_nearZ(0.1f), 
+					m_farZ(10.0f), 
+					m_fovy(glm::radians(50.0f)), 
+					m_aspect(1.0) {}
 
 glm::mat4 Camera::getV() {
-	return glm::rotate(-pitch, glm::vec3(1, 0, 0)) * glm::rotate(-yaw, glm::vec3(0, 1, 0)) * glm::translate(-pos);
+	return glm::rotate(-m_pitch, glm::vec3(1, 0, 0)) * glm::rotate(-m_yaw, glm::vec3(0, 1, 0)) * glm::translate(-m_pos);
 }
 
 glm::mat4 Camera::getP() {
-	return glm::perspective(fovy, aspect, nearZ, farZ);
+	return glm::perspective(m_fovy, m_aspect, m_nearZ, m_farZ);
 }
 
 glm::mat4 Camera::getVInv() {
-	return glm::translate(pos) * glm::rotate(yaw, glm::vec3(0, 1, 0)) * glm::rotate(pitch, glm::vec3(1, 0, 0));
+	return glm::translate(m_pos) * glm::rotate(m_yaw, glm::vec3(0, 1, 0)) * glm::rotate(m_pitch, glm::vec3(1, 0, 0));
 }
 
 glm::vec3 Camera::getViewDir() {

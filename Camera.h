@@ -10,9 +10,9 @@ public:
 	glm::mat4 getVInv();
 	glm::vec3 getViewDir();
 
-	glm::vec3 pos;
-	float pitch, yaw;
-	float nearZ, farZ;
-	float fovy;
-	float aspect;
+	glm::vec3 m_pos;
+	float m_pitch, m_yaw;
+	float m_nearZ, m_farZ;
+	float m_fovy;
+	float m_aspect;
 };

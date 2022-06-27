@@ -10,12 +10,14 @@
 #include "Cylinder.h"
 #include "SmokeSystem.h"
 #include "Sun.h"
+#include "Flashlight.h"
 
 class Scene {
 public:
 	Scene();
 	~Scene();
 	void render();
+	Flashlight& getFlashlight() { return m_flashlight;  }
 
 	Camera m_cam;
 	bool m_binoMode;
@@ -24,6 +26,7 @@ private:
 	void renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow);
 
 	Sun m_sun;
+	Flashlight m_flashlight;
 
     ShaderProgram m_textureKdProg, m_constantKdProg, m_hmapProg, m_bumpmapProg, m_alphatextureProg, m_shadowProg;
 
