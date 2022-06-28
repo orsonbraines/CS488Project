@@ -13,10 +13,12 @@ out vec3 fs_vdir;
 out vec3 fs_eye;
 out vec4 fs_sunSpacePos;
 out vec3 fs_fl;
+out vec4 fs_flSpacePos;
 
 
 uniform mat4 M;
 uniform mat4 sunPVM;
+uniform mat4 flPVM;
 uniform mat4 camPVM;
 uniform mat3 normalMatrix;
 uniform vec3 vs_eye;
@@ -31,4 +33,5 @@ void main() {
 	fs_eye = vs_eye - vec3(M * vec4(pos, 1.0));
 	fs_sunSpacePos = sunPVM * vec4(pos, 1.0);
 	fs_fl = flPos - vec3(M * vec4(pos, 1.0));
+	fs_flSpacePos = flPVM * vec4(pos, 1.0);
 }

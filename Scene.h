@@ -24,13 +24,15 @@ public:
 	uint m_defaultFboW, m_defaultFboH;
 private:
 	void renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow);
+	void setCommonUniforms(const ShaderProgram &p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
+	void setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
 
 	Sun m_sun;
 	Flashlight m_flashlight;
 
     ShaderProgram m_textureKdProg, m_constantKdProg, m_hmapProg, m_bumpmapProg, m_alphatextureProg, m_shadowProg;
 
-    Texture m_tex123456, m_texHeightmap, m_texBmapHeightfield, m_texBino, m_texShadowMap;
+    Texture m_tex123456, m_texHeightmap, m_texBmapHeightfield, m_texBino, m_texSunShadowMap, m_texFlShadowMap;
 
 	Model m_tree, m_cube;
 	ModelInstance m_tree1, m_cube1;
@@ -41,6 +43,6 @@ private:
 
 	GLuint m_alphatVao, m_alphatVbo;
 
-	GLuint m_shadowMapFbo;
-	const uint m_shadowTextureSize;
+	GLuint m_sunShadowMapFbo, m_flShadowMapFbo;
+	const uint m_sunShadowTextureSize, m_flShadowTextureSize;
 };

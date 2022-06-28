@@ -76,6 +76,9 @@ int main(int ArgCount, char** Args)
                     case SDLK_b:
                         scene.m_binoMode = !scene.m_binoMode;
                         break;
+                    case SDLK_f:
+                        scene.getFlashlight().toggle();
+                        break;
                     default:
                         break;
                     }

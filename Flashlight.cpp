@@ -13,8 +13,17 @@ glm::vec3 Flashlight::getDir() const {
     return (m_cam.getVInv() * glm::rotate(m_yaw, glm::vec3(0, 1, 0)) * glm::rotate(m_pitch, glm::vec3(1, 0, 0)))[2];
 }
 
+glm::mat4 Flashlight::getV() const {
+    return glm::rotate(-m_pitch, glm::vec3(1, 0, 0)) * glm::rotate(-m_yaw, glm::vec3(0, 1, 0)) * glm::rotate(-m_cam.m_pitch, glm::vec3(1, 0, 0)) * glm::rotate(-m_cam.m_yaw, glm::vec3(0, 1, 0)) * glm::translate(-getPos());
+    //return m_cam.getV();
+}
+
+glm::mat4 Flashlight::getP() const {
+    return glm::perspective(getHardCutoff(), 1.0f, 0.5f, 15.0f);
+}
+
 glm::vec3 Flashlight::getColour() const {
-    return glm::vec3(1.0f, 1.0f, 1.0f);
+    return m_on ? glm::vec3(2.0f, 2.0f, 2.0f) : glm::vec3(0.0f);
 }
 
 float Flashlight::getHardCutoff() const {
