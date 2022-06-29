@@ -10,6 +10,7 @@ Scene::Scene() :
     m_textureKdProg("shaders/textureKd.vs", "shaders/textureKd.fs"),
     m_constantKdProg("shaders/constantKd.vs", "shaders/constantKd.fs"),
     m_hmapProg("shaders/hmap.vs", "shaders/constantKd.fs"),
+    m_waterProg("shaders/water.vs", "shaders/constantKd.fs"),
     m_bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs"),
     m_alphatextureProg("shaders/alphatexture.vs", "shaders/alphatexture.fs"),
     m_shadowProg("shaders/shadow.vs", "shaders/shadow.fs"),
@@ -25,7 +26,8 @@ Scene::Scene() :
     m_defaultFboW(0),
     m_defaultFboH(0),
     m_sunShadowTextureSize(2048),
-    m_flShadowTextureSize(1024)
+    m_flShadowTextureSize(1024),
+    m_reflectionPlane(2.5f)
 {
 	// load textures
 	m_tex123456.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
@@ -104,9 +106,10 @@ Scene::~Scene() {
 }
 
 void Scene::render() {
-    m_sun.tick(0.004f);
+    //m_sun.tick(0.004f);
 
     glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_STENCIL_TEST);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -116,12 +119,12 @@ void Scene::render() {
     glBindFramebuffer(GL_FRAMEBUFFER, m_sunShadowMapFbo);
     glViewport(0, 0, m_sunShadowTextureSize, m_sunShadowTextureSize);
     glClear(GL_DEPTH_BUFFER_BIT);
-    renderObjects(m_sun.getP(), m_sun.getV(m_cam.m_pos), true);
+    renderObjects(m_sun.getP(), m_sun.getV(m_cam.m_pos), true, 1.0f);
 
     glBindFramebuffer(GL_FRAMEBUFFER, m_flShadowMapFbo);
     glViewport(0, 0, m_flShadowTextureSize, m_flShadowTextureSize);
     glClear(GL_DEPTH_BUFFER_BIT);
-    renderObjects(m_flashlight.getP(), m_flashlight.getV(), true);
+    renderObjects(m_flashlight.getP(), m_flashlight.getV(), true, 1.0f);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, m_defaultFboW, m_defaultFboH);
@@ -134,7 +137,7 @@ void Scene::render() {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         m_cam.m_fovy = glm::radians(50.0f);
     }
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
     if (m_binoMode) {
         glEnable(GL_SCISSOR_TEST);
@@ -147,14 +150,29 @@ void Scene::render() {
         glScissor(scissorX, scissorY, scissorW, scissorH);
     }
 
-    renderObjects(m_cam.getP(), m_cam.getV(), false);
+    renderObjects(m_cam.getP(), m_cam.getV(), false, 1.0f);
+    renderGround(m_cam.getP(), m_cam.getV());
 
-    m_smoke.setPV(m_cam.getP() * m_cam.getV());
-    m_smoke.setVinv(m_cam.getVInv());
+    // draw the water and mark with stencil
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_ALWAYS, 0, 0xff);
+    glStencilOp(GL_KEEP, GL_KEEP,GL_INCR);
+    renderWater(m_cam.getP(), m_cam.getV());
+    glDisable(GL_STENCIL_TEST);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+
     m_smoke.tick();
     glDepthMask(GL_FALSE); // smoke should not overwrite the depth buffer
-    m_smoke.draw();
+    renderSmoke(m_cam.getP(), m_cam.getV());
     glDepthMask(GL_TRUE);
+
+    // draw the reflected objects in the water
+    glEnable(GL_STENCIL_TEST);
+    glStencilFunc(GL_LEQUAL, 1, 0xff);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    glCullFace(GL_FRONT); // the faces will reverse direction when reflected
+    glClear(GL_DEPTH_BUFFER_BIT);
+    renderObjects(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), false, 0.5f);
 
     if (m_binoMode) {
         glDisable(GL_DEPTH_TEST);
@@ -172,7 +190,7 @@ void Scene::render() {
     }
 }
 
-void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow) {
+void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow, float alpha) {
     if (isShadow) {
         m_shadowProg.use();
         setShadowPVM(P, V, m_cube1.getM());
@@ -207,6 +225,7 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         m_texFlShadowMap.bind();
         glUniform1i(m_constantKdProg["flShadow"], 1);
         setCommonUniforms(m_constantKdProg, P, V, m_tree1.getM());
+        glUniform1f(m_constantKdProg["u_alpha"], alpha);
         m_tree1.setUniformLocations(m_constantKdProg["Kd"], m_constantKdProg["Ks"], m_constantKdProg["Ns"]);
     }
     m_tree1.draw();
@@ -231,30 +250,62 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow)
         glUniform1i(m_bumpmapProg["heightfield"], 2);
     }
     m_cyl1.draw();
+}
 
-    if (!isShadow) {
-        glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0));
-        meshM = glm::scale(glm::vec3(40.0f, 4.0f, 40.0f)) * meshM;
-        meshM = glm::translate(glm::vec3(-20.0f, -2.5f, 20.f)) * meshM;
-        // can't use shadow program here because pos isn't in attrib 0
-        m_hmapProg.use();
-        glActiveTexture(GL_TEXTURE0);
-        m_texSunShadowMap.bind();
-        glUniform1i(m_hmapProg["sunShadow"], 0);
-        glActiveTexture(GL_TEXTURE1);
-        m_texFlShadowMap.bind();
-        glUniform1i(m_hmapProg["flShadow"], 1);
-        glActiveTexture(GL_TEXTURE2);
-        m_texHeightmap.bind();
-        glUniform1i(m_hmapProg["sampler"], 2);
+void Scene::renderSmoke(const glm::mat4& P, const glm::mat4& V) {
+    m_smoke.setPV(m_cam.getP() * m_cam.getV());
+    m_smoke.setVinv(m_cam.getVInv());
+    m_smoke.draw();
+}
 
-        glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(meshM)));
-        setCommonUniforms(m_hmapProg, P, V, meshM);
-        glUniform3f(m_hmapProg["Ks"], 0, 0, 0);
-        glUniform1f(m_hmapProg["Ns"], 0);
-        glUniform3f(m_hmapProg["Kd"], 0.1f, 0.4f, 0.1f);
-        m_gridMesh.draw();
-    }
+void Scene::renderGround(const glm::mat4& P, const glm::mat4& V) {
+    glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    float scaleY = 4.0f;
+    meshM = glm::scale(glm::vec3(40.0f, scaleY, 40.0f)) * meshM;
+    meshM = glm::translate(glm::vec3(-20.0f, -2.5f, 20.f)) * meshM;
+    m_hmapProg.use();
+    glActiveTexture(GL_TEXTURE0);
+    m_texSunShadowMap.bind();
+    glUniform1i(m_hmapProg["sunShadow"], 0);
+    glActiveTexture(GL_TEXTURE1);
+    m_texFlShadowMap.bind();
+    glUniform1i(m_hmapProg["flShadow"], 1);
+    glActiveTexture(GL_TEXTURE2);
+    m_texHeightmap.bind();
+    glUniform1i(m_hmapProg["sampler"], 2);
+
+    setCommonUniforms(m_hmapProg, P, V, meshM);
+    glUniform3f(m_hmapProg["Ks"], 0, 0, 0);
+    glUniform1f(m_hmapProg["Ns"], 0);
+    glUniform3f(m_hmapProg["Kd"], 0.1f, 0.4f, 0.1f);
+    m_gridMesh.draw();
+}
+
+void Scene::renderWater(const glm::mat4& P, const glm::mat4& V) {
+    glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    float scaleY = 4.0f;
+    meshM = glm::scale(glm::vec3(40.0f, scaleY, 40.0f)) * meshM;
+    meshM = glm::translate(glm::vec3(-20.0f, -2.5f, 20.f)) * meshM;
+    m_waterProg.use();
+    glActiveTexture(GL_TEXTURE0);
+    m_texSunShadowMap.bind();
+    glUniform1i(m_waterProg["sunShadow"], 0);
+    glActiveTexture(GL_TEXTURE1);
+    m_texFlShadowMap.bind();
+    glUniform1i(m_waterProg["flShadow"], 1);
+    glActiveTexture(GL_TEXTURE2);
+    m_texHeightmap.bind();
+    glUniform1i(m_waterProg["sampler"], 2);
+
+    setCommonUniforms(m_waterProg, P, V, meshM);
+    glUniform3f(m_waterProg["Ks"], 1.0f, 1.0f, 1.0f);
+    glUniform1f(m_waterProg["Ns"], 50.0f);
+    glUniform3f(m_waterProg["Kd"], 0.1f, 0.1f, 0.9f);
+
+    glUniform1f(m_waterProg["plane"], m_reflectionPlane / scaleY);
+    glUniform1f(m_waterProg["maxAlphaDepth"], 0.05f);
+    m_gridMesh.draw();
+
 }
 
 void Scene::setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4& M) {
@@ -263,9 +314,9 @@ void Scene::setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4
 
 void Scene::setCommonUniforms(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M) {
     glm::vec3 sunDir = m_sun.getLightDir();
-    glm::mat4 PV = P * V;
-    glm::mat4 sunPV = m_sun.getP() * m_sun.getV(m_cam.m_pos);
-    glm::mat4 flPV = m_flashlight.getP() * m_flashlight.getV();
+    glm::mat4 PV = P * V;// *getReflectionMatrix();
+    glm::mat4 sunPV = m_sun.getP() * m_sun.getV(m_cam.m_pos);// *getReflectionMatrix();
+    glm::mat4 flPV = m_flashlight.getP() * m_flashlight.getV();// *getReflectionMatrix();
     glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(M)));
     glm::mat4 pvm = PV * M;
     glUniformMatrix4fv(p["camPVM"], 1, false, glm::value_ptr(pvm));
@@ -276,10 +327,15 @@ void Scene::setCommonUniforms(const ShaderProgram& p, const glm::mat4& P, const 
     glUniform3fv(p["sunlightDir"], 1, glm::value_ptr(sunDir));
     glUniform3fv(p["ambientColour"], 1, glm::value_ptr(m_sun.getAmbientColour()));
     glUniform3fv(p["sunlightColour"], 1, glm::value_ptr(m_sun.getColour()));
-    glUniform3fv(p["vs_eye"], 1, glm::value_ptr(m_cam.m_pos));
+    glUniform3fv(p["u_eye"], 1, glm::value_ptr(m_cam.m_pos));
     glUniform3fv(p["flPos"], 1, glm::value_ptr(m_flashlight.getPos()));
     glUniform3fv(p["flDir"], 1, glm::value_ptr(m_flashlight.getDir()));
     glUniform3fv(p["flColour"], 1, glm::value_ptr(m_flashlight.getColour()));
     glUniform1f(p["flSoftCutoff"], m_flashlight.getSoftCutoff());
     glUniform1f(p["flHardCutoff"], m_flashlight.getHardCutoff());
+}
+
+glm::mat4 Scene::getReflectionMatrix() const {
+    glm::mat4 reflect = glm::mat4(glm::vec4(1,0,0,0), glm::vec4(0, -1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1));
+    return glm::translate(glm::vec3(0,m_reflectionPlane,0)) * reflect * glm::translate(glm::vec3(0, m_reflectionPlane, 0));
 }

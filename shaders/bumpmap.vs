@@ -21,7 +21,7 @@ uniform mat4 sunPVM;
 uniform mat4 flPVM;
 uniform mat4 camPVM;
 uniform mat3 normalMatrix;
-uniform vec3 vs_eye;
+uniform vec3 u_eye;
 uniform vec3 flPos;
 
 void main() {
@@ -30,7 +30,7 @@ void main() {
 	fs_uv = vs_uv;
 	fs_udir = vec3(M * vec4(vs_udir, 0.0));
 	fs_vdir = vec3(M * vec4(vs_vdir, 0.0));
-	fs_eye = vs_eye - vec3(M * vec4(pos, 1.0));
+	fs_eye = u_eye - vec3(M * vec4(pos, 1.0));
 	fs_sunSpacePos = sunPVM * vec4(pos, 1.0);
 	fs_fl = flPos - vec3(M * vec4(pos, 1.0));
 	fs_flSpacePos = flPVM * vec4(pos, 1.0);

@@ -7,6 +7,7 @@ out vec3 fs_eye;
 out vec4 fs_sunSpacePos;
 out vec3 fs_fl;
 out vec4 fs_flSpacePos;
+out float alpha;
 
 uniform sampler2D sampler;
 uniform mat4 camPVM;
@@ -15,7 +16,7 @@ uniform mat4 flPVM;
 uniform mat4 M;
 
 uniform mat3 normalMatrix;
-uniform vec3 vs_eye;
+uniform vec3 u_eye;
 uniform vec3 flPos;
 
 void main() {
@@ -27,8 +28,9 @@ void main() {
 	float dzdy = (texture(sampler, pos + vec2(0, h.y)).r - texture(sampler, pos - vec2(0, h.y)).r) / (2.0 * h.y);
 
 	fs_normal = normalMatrix * cross(vec3(1, 0, dzdx), vec3(0, 1, dzdy));
-	fs_eye = vs_eye - vec3(M * vec4(pos.x, pos.y, z, 1.0));
+	fs_eye = u_eye - vec3(M * vec4(pos.x, pos.y, z, 1.0));
 	fs_sunSpacePos = sunPVM * vec4(pos.x, pos.y, z, 1.0);
 	fs_fl = flPos - vec3(M * vec4(pos.x, pos.y, z, 1.0));
 	fs_flSpacePos = flPVM * vec4(pos.x, pos.y, z, 1.0);
+	alpha = 1.0f;
 }

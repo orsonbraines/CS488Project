@@ -5,7 +5,7 @@ in vec3 fs_eye;
 in vec4 fs_sunSpacePos;
 in vec3 fs_fl;
 in vec4 fs_flSpacePos;
-in float alpha;
+in vec2 fs_uv;
 
 out vec4 colour_out;
 
@@ -25,6 +25,10 @@ uniform float Ns;
 
 uniform sampler2D sunShadow;
 uniform sampler2D flShadow;
+uniform sampler2D sampler;
+
+uniform float plane;
+uniform float maxAlphaDepth;
 
 float shadowRatio(sampler2D shadow, vec4 lightSpacePos, float shadowBias) {
 	// perspective divide and map to [0,1]
@@ -80,5 +84,7 @@ void main() {
 	vec3 colour = ambientColour * Kd;
 	colour += sunShade();
 	colour += flShade();
+	float z = texture(sampler, fs_uv).r;
+	float alpha = clamp((plane - z) / maxAlphaDepth, 0.0, 1.0); 
 	colour_out = vec4(colour, alpha);
 }

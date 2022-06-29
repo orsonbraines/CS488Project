@@ -14,8 +14,9 @@
 
 int main(int ArgCount, char** Args)
 {
-    if (!SDL_WasInit(SDL_INIT_EVERYTHING)) {
-        SDL_Init(SDL_INIT_EVERYTHING);
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        std::cerr << "Unable to initialize SDL" << std::endl;
+        return 1;
     }
     int framebuffer_w = 640;
     int framebuffer_h = 360;
@@ -153,6 +154,7 @@ int main(int ArgCount, char** Args)
         return 1;
     }
 
+    SDL_Quit();
 
     return 0;
 }

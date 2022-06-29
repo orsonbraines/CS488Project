@@ -23,14 +23,24 @@ public:
 	bool m_binoMode;
 	uint m_defaultFboW, m_defaultFboH;
 private:
-	void renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow);
+	void renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow, float alpha);
+	void renderSmoke(const glm::mat4& P, const glm::mat4& V);
+	void renderGround(const glm::mat4& P, const glm::mat4& V);
+	void renderWater(const glm::mat4& P, const glm::mat4& V);
 	void setCommonUniforms(const ShaderProgram &p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
 	void setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
+	glm::mat4 getReflectionMatrix() const; // reflection about xz plane at given y
 
 	Sun m_sun;
 	Flashlight m_flashlight;
 
-    ShaderProgram m_textureKdProg, m_constantKdProg, m_hmapProg, m_bumpmapProg, m_alphatextureProg, m_shadowProg;
+    ShaderProgram m_textureKdProg, 
+		m_constantKdProg,
+		m_hmapProg, 
+		m_bumpmapProg, 
+		m_alphatextureProg, 
+		m_shadowProg,
+		m_waterProg;
 
     Texture m_tex123456, m_texHeightmap, m_texBmapHeightfield, m_texBino, m_texSunShadowMap, m_texFlShadowMap;
 
@@ -45,4 +55,5 @@ private:
 
 	GLuint m_sunShadowMapFbo, m_flShadowMapFbo;
 	const uint m_sunShadowTextureSize, m_flShadowTextureSize;
+	const float m_reflectionPlane;
 };
