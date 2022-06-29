@@ -14,6 +14,7 @@ Scene::Scene() :
     m_bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs"),
     m_alphatextureProg("shaders/alphatexture.vs", "shaders/alphatexture.fs"),
     m_alphatextureProg2("shaders/alphatexture.vs", "shaders/alphatexture2.fs"),
+    m_blurProg("shaders/alphatexture.vs", "shaders/blur.fs"),
     m_shadowProg("shaders/shadow.vs", "shaders/shadow.fs"),
 	m_tree("models/simpletree.obj"),
 	m_tree1(&m_tree),
@@ -28,8 +29,8 @@ Scene::Scene() :
     m_defaultFboH(0),
     m_sunShadowTextureSize(2048),
     m_flShadowTextureSize(1024),
-    m_reflectedSceneWidth(640),
-    m_reflectedSceneHeight(360),
+    m_sceneWidth(640),
+    m_sceneHeight(360),
     m_reflectionPlane(2.5f)
 {
 	// load textures
@@ -100,12 +101,22 @@ Scene::Scene() :
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    glTextureStorage2D(m_texReflectedDepth.getId(), 1, GL_DEPTH_COMPONENT32, m_reflectedSceneWidth, m_reflectedSceneHeight);
-    glTextureStorage2D(m_texReflectedScene.getId(), 1, GL_RGBA8, m_reflectedSceneWidth, m_reflectedSceneHeight);
+    glTextureStorage2D(m_texReflectedDepth.getId(), 1, GL_DEPTH_COMPONENT32, m_sceneWidth, m_sceneHeight);
+    glTextureStorage2D(m_texReflectedScene.getId(), 1, GL_RGBA8, m_sceneWidth, m_sceneHeight);
     glGenFramebuffers(1, &m_reflectedFbo);
     glBindFramebuffer(GL_FRAMEBUFFER, m_reflectedFbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_texReflectedDepth.getId(), 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texReflectedScene.getId(), 0);
+    glDrawBuffer(GL_FRONT);
+    glReadBuffer(GL_FRONT);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glTextureStorage2D(m_texSceneDepth.getId(), 1, GL_DEPTH24_STENCIL8, m_sceneWidth, m_sceneHeight);
+    glTextureStorage2D(m_texScene.getId(), 1, GL_RGBA8, m_sceneWidth, m_sceneHeight);
+    glGenFramebuffers(1, &m_sceneFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, m_texSceneDepth.getId(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texScene.getId(), 0);
     glDrawBuffer(GL_FRONT);
     glReadBuffer(GL_FRONT);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -118,6 +129,7 @@ Scene::~Scene() {
     glDeleteFramebuffers(1, &m_sunShadowMapFbo);
     glDeleteFramebuffers(1, &m_flShadowMapFbo);
     glDeleteFramebuffers(1, &m_reflectedFbo);
+    glDeleteFramebuffers(1, &m_sceneFbo);
 }
 
 void Scene::render() {
@@ -142,8 +154,8 @@ void Scene::render() {
     glClear(GL_DEPTH_BUFFER_BIT);
     renderObjects(m_flashlight.getP(), m_flashlight.getV(), true, 1.0f);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glViewport(0, 0, m_defaultFboW, m_defaultFboH);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFbo);
+    glViewport(0, 0, m_sceneWidth, m_sceneHeight);
     if (m_binoMode) {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         m_cam.m_fovy = glm::radians(18.0f);
@@ -196,6 +208,28 @@ void Scene::render() {
     glCullFace(GL_BACK);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    // blur the scene into default framebuffer
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_sceneFbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glBlitFramebuffer(0, 0, m_sceneWidth, m_sceneHeight, 0, 0, m_defaultFboW, m_defaultFboH, GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    m_blurProg.use();
+    glBindVertexArray(m_alphatVao);
+    glActiveTexture(GL_TEXTURE0);
+    m_texScene.bind();
+    glUniform1i(m_blurProg["colourIn"], 0);
+    glActiveTexture(GL_TEXTURE1);
+    m_texSceneDepth.bind();
+    glUniform1i(m_blurProg["depthIn"], 1);
+    glm::mat3 I(1.0f);
+    glUniformMatrix3fv(m_blurProg["M"], 1, GL_FALSE, glm::value_ptr(I));
+    glUniform1f(m_blurProg["nearFocus"], 0.0f);
+    glUniform1f(m_blurProg["farFocus"], 0.99f);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
@@ -205,9 +239,9 @@ void Scene::render() {
     glBindVertexArray(m_alphatVao);
     glActiveTexture(GL_TEXTURE0);
     m_texReflectedScene.bind();
-    glUniform1i(m_alphatextureProg["sampler"], 0);
-    glm::mat3 I(1.0f);
-    glUniformMatrix3fv(m_alphatextureProg["M"], 1, GL_FALSE, glm::value_ptr(I));
+    glUniform1i(m_alphatextureProg2["sampler"], 0);
+    //glm::mat3 I(1.0f);
+    glUniformMatrix3fv(m_alphatextureProg2["M"], 1, GL_FALSE, glm::value_ptr(I));
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 

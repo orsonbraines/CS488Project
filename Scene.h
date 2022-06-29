@@ -40,10 +40,20 @@ private:
 		m_bumpmapProg, 
 		m_alphatextureProg,
 		m_alphatextureProg2,
+		m_blurProg,
 		m_shadowProg,
 		m_waterProg;
 
-    Texture m_tex123456, m_texHeightmap, m_texBmapHeightfield, m_texBino, m_texSunShadowMap, m_texFlShadowMap, m_texReflectedScene, m_texReflectedDepth;
+    Texture m_tex123456,
+		m_texHeightmap,
+		m_texBmapHeightfield,
+		m_texBino,
+		m_texSunShadowMap,
+		m_texFlShadowMap,
+		m_texReflectedScene,
+		m_texReflectedDepth, 
+		m_texScene, 
+		m_texSceneDepth;
 
 	Model m_tree, m_cube;
 	ModelInstance m_tree1, m_cube1;
@@ -54,8 +64,8 @@ private:
 
 	GLuint m_alphatVao, m_alphatVbo;
 
-	GLuint m_sunShadowMapFbo, m_flShadowMapFbo, m_reflectedFbo;
+	GLuint m_sunShadowMapFbo, m_flShadowMapFbo, m_reflectedFbo, m_sceneFbo;
 	const uint m_sunShadowTextureSize, m_flShadowTextureSize;
-	uint m_reflectedSceneWidth, m_reflectedSceneHeight;
+	uint m_sceneWidth, m_sceneHeight;
 	const float m_reflectionPlane;
 };
