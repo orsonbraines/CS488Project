@@ -25,7 +25,7 @@ public:
 private:
 	void renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow, float alpha);
 	void renderSmoke(const glm::mat4& P, const glm::mat4& V);
-	void renderGround(const glm::mat4& P, const glm::mat4& V);
+	void renderGround(const glm::mat4& P, const glm::mat4& V, float alpha);
 	void renderWater(const glm::mat4& P, const glm::mat4& V);
 	void setCommonUniforms(const ShaderProgram &p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
 	void setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);

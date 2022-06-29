@@ -40,12 +40,12 @@ Scene::Scene() :
 
 	// Set the model instance transforms
 	m_tree1.transform(glm::scale(glm::vec3(0.5f, 1.0f, 0.5f)));
-	m_tree1.transform(glm::translate(glm::vec3(2.0f, 0.0f, -2.0f)));
+	m_tree1.transform(glm::translate(glm::vec3(2.0f, 2.0f, -2.0f)));
 	m_cube1.transform(glm::scale(glm::vec3(0.5f, 0.5f, 0.5f)));
-	m_cube1.transform(glm::translate(glm::vec3(4.0f, 1.0f, 0.0f)));
+	m_cube1.transform(glm::translate(glm::vec3(4.0f, 0.0f, 0.0f)));
 	m_cyl1.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)));
 	m_cyl1.transform(glm::scale(glm::vec3(0.3f, 4.0f, 0.3f)));
-	m_cyl1.transform(glm::translate(glm::vec3(3.0f, -0.2f, 1.0f)));
+	m_cyl1.transform(glm::translate(glm::vec3(3.0f, 2.0f, 1.0f)));
 
 	// I don't have a mesh/geometry class for this alpha texture yet
 	// alphat mesh
@@ -70,7 +70,7 @@ Scene::Scene() :
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// init camera pos
-	m_cam.m_pos = glm::vec3(0, 0, 8);
+	m_cam.m_pos = glm::vec3(0, m_reflectionPlane + 0.5f, 8);
 	//m_cam.yaw = glm::radians(180.0f);
 	m_cam.m_farZ = 100.0f;
 
@@ -106,10 +106,11 @@ Scene::~Scene() {
 }
 
 void Scene::render() {
-    //m_sun.tick(0.004f);
+    m_sun.tick(0.004f);
 
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_STENCIL_TEST);
+    glDisable(GL_CLIP_DISTANCE0);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
@@ -151,7 +152,7 @@ void Scene::render() {
     }
 
     renderObjects(m_cam.getP(), m_cam.getV(), false, 1.0f);
-    renderGround(m_cam.getP(), m_cam.getV());
+    renderGround(m_cam.getP(), m_cam.getV(), 1.0f);
 
     // draw the water and mark with stencil
     glEnable(GL_STENCIL_TEST);
@@ -168,11 +169,15 @@ void Scene::render() {
 
     // draw the reflected objects in the water
     glEnable(GL_STENCIL_TEST);
+    glEnable(GL_CLIP_DISTANCE0);
     glStencilFunc(GL_LEQUAL, 1, 0xff);
     glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
     glCullFace(GL_FRONT); // the faces will reverse direction when reflected
     glClear(GL_DEPTH_BUFFER_BIT);
     renderObjects(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), false, 0.5f);
+    renderGround(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.5f);
+    glDisable(GL_CLIP_DISTANCE0);
+    glDisable(GL_STENCIL_TEST);
 
     if (m_binoMode) {
         glDisable(GL_DEPTH_TEST);
@@ -207,6 +212,7 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow,
         glActiveTexture(GL_TEXTURE2);
         m_texFlShadowMap.bind();
         glUniform1i(m_textureKdProg["flShadow"], 2);
+        glUniform1f(m_textureKdProg["u_alpha"], alpha);
         setCommonUniforms(m_textureKdProg, P, V, m_cube1.getM());
         m_cube1.setUniformLocations(-1, m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
     }
@@ -238,6 +244,7 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow,
         glUniform3f(m_bumpmapProg["Ks"], 0, 0, 0);
         glUniform1f(m_bumpmapProg["Ns"], 0);
         glUniform3f(m_bumpmapProg["Kd"], 0.329826f, 0.060918f, 0.008916f);
+        glUniform1f(m_bumpmapProg["u_alpha"], alpha);
         setCommonUniforms(m_bumpmapProg, P, V, m_cyl1.getM());
         glActiveTexture(GL_TEXTURE0);
         m_texSunShadowMap.bind();
@@ -258,11 +265,11 @@ void Scene::renderSmoke(const glm::mat4& P, const glm::mat4& V) {
     m_smoke.draw();
 }
 
-void Scene::renderGround(const glm::mat4& P, const glm::mat4& V) {
+void Scene::renderGround(const glm::mat4& P, const glm::mat4& V, float alpha) {
     glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0));
     float scaleY = 4.0f;
     meshM = glm::scale(glm::vec3(40.0f, scaleY, 40.0f)) * meshM;
-    meshM = glm::translate(glm::vec3(-20.0f, -2.5f, 20.f)) * meshM;
+    meshM = glm::translate(glm::vec3(-20.0f, 0.0f, 20.f)) * meshM;
     m_hmapProg.use();
     glActiveTexture(GL_TEXTURE0);
     m_texSunShadowMap.bind();
@@ -273,7 +280,7 @@ void Scene::renderGround(const glm::mat4& P, const glm::mat4& V) {
     glActiveTexture(GL_TEXTURE2);
     m_texHeightmap.bind();
     glUniform1i(m_hmapProg["sampler"], 2);
-
+    glUniform1f(m_hmapProg["u_alpha"], alpha);
     setCommonUniforms(m_hmapProg, P, V, meshM);
     glUniform3f(m_hmapProg["Ks"], 0, 0, 0);
     glUniform1f(m_hmapProg["Ns"], 0);
@@ -285,7 +292,7 @@ void Scene::renderWater(const glm::mat4& P, const glm::mat4& V) {
     glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0));
     float scaleY = 4.0f;
     meshM = glm::scale(glm::vec3(40.0f, scaleY, 40.0f)) * meshM;
-    meshM = glm::translate(glm::vec3(-20.0f, -2.5f, 20.f)) * meshM;
+    meshM = glm::translate(glm::vec3(-20.0f, 0.0f, 20.f)) * meshM;
     m_waterProg.use();
     glActiveTexture(GL_TEXTURE0);
     m_texSunShadowMap.bind();
@@ -314,9 +321,9 @@ void Scene::setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4
 
 void Scene::setCommonUniforms(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M) {
     glm::vec3 sunDir = m_sun.getLightDir();
-    glm::mat4 PV = P * V;// *getReflectionMatrix();
-    glm::mat4 sunPV = m_sun.getP() * m_sun.getV(m_cam.m_pos);// *getReflectionMatrix();
-    glm::mat4 flPV = m_flashlight.getP() * m_flashlight.getV();// *getReflectionMatrix();
+    glm::mat4 PV = P * V;
+    glm::mat4 sunPV = m_sun.getP() * m_sun.getV(m_cam.m_pos);
+    glm::mat4 flPV = m_flashlight.getP() * m_flashlight.getV();
     glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(M)));
     glm::mat4 pvm = PV * M;
     glUniformMatrix4fv(p["camPVM"], 1, false, glm::value_ptr(pvm));
@@ -333,9 +340,10 @@ void Scene::setCommonUniforms(const ShaderProgram& p, const glm::mat4& P, const 
     glUniform3fv(p["flColour"], 1, glm::value_ptr(m_flashlight.getColour()));
     glUniform1f(p["flSoftCutoff"], m_flashlight.getSoftCutoff());
     glUniform1f(p["flHardCutoff"], m_flashlight.getHardCutoff());
+    glUniform1f(p["plane"], m_reflectionPlane);
 }
 
 glm::mat4 Scene::getReflectionMatrix() const {
     glm::mat4 reflect = glm::mat4(glm::vec4(1,0,0,0), glm::vec4(0, -1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1));
-    return glm::translate(glm::vec3(0,m_reflectionPlane,0)) * reflect * glm::translate(glm::vec3(0, m_reflectionPlane, 0));
+    return glm::translate(glm::vec3(0, m_reflectionPlane, 0)) * reflect * glm::translate(glm::vec3(0, -m_reflectionPlane, 0));
 }

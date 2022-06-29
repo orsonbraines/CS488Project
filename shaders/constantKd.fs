@@ -5,7 +5,7 @@ in vec3 fs_eye;
 in vec4 fs_sunSpacePos;
 in vec3 fs_fl;
 in vec4 fs_flSpacePos;
-in float alpha;
+in float fs_alpha;
 
 out vec4 colour_out;
 
@@ -80,5 +80,5 @@ void main() {
 	vec3 colour = ambientColour * Kd;
 	colour += sunShade();
 	colour += flShade();
-	colour_out = vec4(colour, alpha);
+	colour_out = vec4(colour, fs_alpha);
 }

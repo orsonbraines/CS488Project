@@ -7,7 +7,7 @@ out vec3 fs_eye;
 out vec4 fs_sunSpacePos;
 out vec3 fs_fl;
 out vec4 fs_flSpacePos;
-out float alpha;
+out float fs_alpha;
 
 uniform sampler2D sampler;
 uniform mat4 camPVM;
@@ -24,7 +24,7 @@ uniform float maxAlphaDepth;
 
 void main() {
 	float z = texture(sampler, pos).r;
-	alpha = clamp((plane - z) / maxAlphaDepth, 0.0, 1.0); 
+	fs_alpha = clamp((plane - z) / maxAlphaDepth, 0.0, 1.0); 
 	vec4 modelPos = vec4(pos.x, pos.y, plane, 1.0);
 	vec3 worldPos = vec3(M * modelPos);
 	gl_Position = camPVM * modelPos;
