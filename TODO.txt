@@ -1,0 +1,11 @@
+Next Steps
+/ Use seperate framebuffer for doing reflections
+- Depth of field
+- Perlin noise hmap generation
+- 2D UI
+- Skybox
+- add a couple of models
+- picking
+- picking sound
+- collision detection
+- improve resolution of shadows

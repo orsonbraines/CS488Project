@@ -38,11 +38,12 @@ private:
 		m_constantKdProg,
 		m_hmapProg, 
 		m_bumpmapProg, 
-		m_alphatextureProg, 
+		m_alphatextureProg,
+		m_alphatextureProg2,
 		m_shadowProg,
 		m_waterProg;
 
-    Texture m_tex123456, m_texHeightmap, m_texBmapHeightfield, m_texBino, m_texSunShadowMap, m_texFlShadowMap;
+    Texture m_tex123456, m_texHeightmap, m_texBmapHeightfield, m_texBino, m_texSunShadowMap, m_texFlShadowMap, m_texReflectedScene, m_texReflectedDepth;
 
 	Model m_tree, m_cube;
 	ModelInstance m_tree1, m_cube1;
@@ -53,7 +54,8 @@ private:
 
 	GLuint m_alphatVao, m_alphatVbo;
 
-	GLuint m_sunShadowMapFbo, m_flShadowMapFbo;
+	GLuint m_sunShadowMapFbo, m_flShadowMapFbo, m_reflectedFbo;
 	const uint m_sunShadowTextureSize, m_flShadowTextureSize;
+	uint m_reflectedSceneWidth, m_reflectedSceneHeight;
 	const float m_reflectionPlane;
 };

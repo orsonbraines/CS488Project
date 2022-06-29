@@ -13,6 +13,7 @@ Scene::Scene() :
     m_waterProg("shaders/water.vs", "shaders/constantKd.fs"),
     m_bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs"),
     m_alphatextureProg("shaders/alphatexture.vs", "shaders/alphatexture.fs"),
+    m_alphatextureProg2("shaders/alphatexture.vs", "shaders/alphatexture2.fs"),
     m_shadowProg("shaders/shadow.vs", "shaders/shadow.fs"),
 	m_tree("models/simpletree.obj"),
 	m_tree1(&m_tree),
@@ -27,6 +28,8 @@ Scene::Scene() :
     m_defaultFboH(0),
     m_sunShadowTextureSize(2048),
     m_flShadowTextureSize(1024),
+    m_reflectedSceneWidth(640),
+    m_reflectedSceneHeight(360),
     m_reflectionPlane(2.5f)
 {
 	// load textures
@@ -96,6 +99,17 @@ Scene::Scene() :
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glTextureStorage2D(m_texReflectedDepth.getId(), 1, GL_DEPTH_COMPONENT32, m_reflectedSceneWidth, m_reflectedSceneHeight);
+    glTextureStorage2D(m_texReflectedScene.getId(), 1, GL_RGBA8, m_reflectedSceneWidth, m_reflectedSceneHeight);
+    glGenFramebuffers(1, &m_reflectedFbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_reflectedFbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_texReflectedDepth.getId(), 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texReflectedScene.getId(), 0);
+    glDrawBuffer(GL_FRONT);
+    glReadBuffer(GL_FRONT);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 }
 
 Scene::~Scene() {
@@ -103,6 +117,7 @@ Scene::~Scene() {
 	glDeleteBuffers(1, &m_alphatVbo);
     glDeleteFramebuffers(1, &m_sunShadowMapFbo);
     glDeleteFramebuffers(1, &m_flShadowMapFbo);
+    glDeleteFramebuffers(1, &m_reflectedFbo);
 }
 
 void Scene::render() {
@@ -168,19 +183,38 @@ void Scene::render() {
     glDepthMask(GL_TRUE);
 
     // draw the reflected objects in the water
-    glEnable(GL_STENCIL_TEST);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_reflectedFbo);
+    glDisable(GL_STENCIL_TEST);
+    glDisable(GL_BLEND);
     glEnable(GL_CLIP_DISTANCE0);
-    glStencilFunc(GL_LEQUAL, 1, 0xff);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
     glCullFace(GL_FRONT); // the faces will reverse direction when reflected
-    glClear(GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     renderObjects(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), false, 0.5f);
     renderGround(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.5f);
     glDisable(GL_CLIP_DISTANCE0);
-    glDisable(GL_STENCIL_TEST);
+    glCullFace(GL_BACK);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glEnable(GL_STENCIL_TEST);
+    glEnable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glStencilFunc(GL_LEQUAL, 1, 0xff);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    m_alphatextureProg2.use();
+    glBindVertexArray(m_alphatVao);
+    glActiveTexture(GL_TEXTURE0);
+    m_texReflectedScene.bind();
+    glUniform1i(m_alphatextureProg["sampler"], 0);
+    glm::mat3 I(1.0f);
+    glUniformMatrix3fv(m_alphatextureProg["M"], 1, GL_FALSE, glm::value_ptr(I));
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+
+    //glBindFramebuffer(GL_READ_FRAMEBUFFER, m_reflectedFbo);
+    //glBlitFramebuffer(0,0,640,360, 0, 0, 640, 360, GL_COLOR_BUFFER_BIT, GL_LINEAR);
 
     if (m_binoMode) {
-        glDisable(GL_DEPTH_TEST);
         m_alphatextureProg.use();
         glBindVertexArray(m_alphatVao);
         glActiveTexture(GL_TEXTURE0);
