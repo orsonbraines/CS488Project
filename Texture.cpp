@@ -183,6 +183,6 @@ Texture::~Texture() {
 	glDeleteTextures(1, &m_texId);
 }
 
-void Texture::bind() {
+void Texture::bind() const {
 	glBindTexture(GL_TEXTURE_2D, m_texId);
 }

@@ -7,7 +7,7 @@ class Texture {
 public:
 	Texture();
 	~Texture();
-	void bind();
+	void bind() const;
 	void setMinFilter(GLint minFilter);
 	void setMagFilter(GLint magFilter);
 	void setWrapS(GLint wrapS);

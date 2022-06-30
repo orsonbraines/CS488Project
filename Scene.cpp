@@ -14,7 +14,8 @@ Scene::Scene() :
     m_bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs"),
     m_alphatextureProg("shaders/alphatexture.vs", "shaders/alphatexture.fs"),
     m_alphatextureProg2("shaders/alphatexture.vs", "shaders/alphatexture2.fs"),
-    m_blurProg("shaders/alphatexture.vs", "shaders/blur.fs"),
+    m_blurProg("shaders/alphatexture.vs", "shaders/dofBlur2.fs"),
+    m_gaussianProg("shaders/alphatexture.vs", "shaders/gaussianBlur.fs"),
     m_shadowProg("shaders/shadow.vs", "shaders/shadow.fs"),
 	m_tree("models/simpletree.obj"),
 	m_tree1(&m_tree),
@@ -89,6 +90,7 @@ Scene::Scene() :
     glDrawBuffer(GL_NONE);
     glReadBuffer(GL_NONE);
 
+
     // Allocate the sun's shadow map
     glTextureStorage2D(m_texFlShadowMap.getId(), 1, GL_DEPTH_COMPONENT32, m_flShadowTextureSize, m_flShadowTextureSize);
     m_texFlShadowMap.setWrapS(GL_CLAMP_TO_BORDER);
@@ -101,14 +103,13 @@ Scene::Scene() :
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+
     glTextureStorage2D(m_texReflectedDepth.getId(), 1, GL_DEPTH_COMPONENT32, m_sceneWidth, m_sceneHeight);
     glTextureStorage2D(m_texReflectedScene.getId(), 1, GL_RGBA8, m_sceneWidth, m_sceneHeight);
     glGenFramebuffers(1, &m_reflectedFbo);
     glBindFramebuffer(GL_FRAMEBUFFER, m_reflectedFbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_texReflectedDepth.getId(), 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texReflectedScene.getId(), 0);
-    glDrawBuffer(GL_FRONT);
-    glReadBuffer(GL_FRONT);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     glTextureStorage2D(m_texSceneDepth.getId(), 1, GL_DEPTH24_STENCIL8, m_sceneWidth, m_sceneHeight);
@@ -117,10 +118,18 @@ Scene::Scene() :
     glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, m_texSceneDepth.getId(), 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texScene.getId(), 0);
-    glDrawBuffer(GL_FRONT);
-    glReadBuffer(GL_FRONT);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
+    DBG(std::cerr << "Line 136" << std::endl);
+
+
+    glGenFramebuffers(2, m_blurFbos);
+    for (int i = 0; i < 2; ++i) {
+        glTextureStorage2D(m_texBlurs[i].getId(), 1, GL_RGBA8, m_sceneWidth / 2, m_sceneHeight / 2);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_blurFbos[i]);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texBlurs[i].getId(), 0);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 Scene::~Scene() {
@@ -130,6 +139,7 @@ Scene::~Scene() {
     glDeleteFramebuffers(1, &m_flShadowMapFbo);
     glDeleteFramebuffers(1, &m_reflectedFbo);
     glDeleteFramebuffers(1, &m_sceneFbo);
+    glDeleteFramebuffers(2, m_blurFbos);
 }
 
 void Scene::render() {
@@ -157,26 +167,14 @@ void Scene::render() {
     glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFbo);
     glViewport(0, 0, m_sceneWidth, m_sceneHeight);
     if (m_binoMode) {
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         m_cam.m_fovy = glm::radians(18.0f);
     }
     else {
-        //glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         m_cam.m_fovy = glm::radians(50.0f);
     }
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-    if (m_binoMode) {
-        glEnable(GL_SCISSOR_TEST);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        GLint scissorX = 0;
-        GLint scissorY = int((-0.5f * m_cam.m_aspect / 2.0f + 0.5f) * m_defaultFboH) + 2;
-        GLint scissorW = m_defaultFboW;
-        GLint scissorH = int(0.5f * m_cam.m_aspect * m_defaultFboH) - 4;
-        glScissor(scissorX, scissorY, scissorW, scissorH);
-    }
 
     renderObjects(m_cam.getP(), m_cam.getV(), false, 1.0f);
     renderGround(m_cam.getP(), m_cam.getV(), 1.0f);
@@ -194,8 +192,9 @@ void Scene::render() {
     renderSmoke(m_cam.getP(), m_cam.getV());
     glDepthMask(GL_TRUE);
 
-    // draw the reflected objects in the water
+    // draw the objects reflected about the water plane
     glBindFramebuffer(GL_FRAMEBUFFER, m_reflectedFbo);
+    glViewport(0,0,m_sceneWidth,m_sceneHeight);
     glDisable(GL_STENCIL_TEST);
     glDisable(GL_BLEND);
     glEnable(GL_CLIP_DISTANCE0);
@@ -208,28 +207,9 @@ void Scene::render() {
     glCullFace(GL_BACK);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // blur the scene into default framebuffer
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_sceneFbo);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    glBlitFramebuffer(0, 0, m_sceneWidth, m_sceneHeight, 0, 0, m_defaultFboW, m_defaultFboH, GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT, GL_NEAREST);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glDisable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
-    m_blurProg.use();
-    glBindVertexArray(m_alphatVao);
-    glActiveTexture(GL_TEXTURE0);
-    m_texScene.bind();
-    glUniform1i(m_blurProg["colourIn"], 0);
-    glActiveTexture(GL_TEXTURE1);
-    m_texSceneDepth.bind();
-    glUniform1i(m_blurProg["depthIn"], 1);
-    glm::mat3 I(1.0f);
-    glUniformMatrix3fv(m_blurProg["M"], 1, GL_FALSE, glm::value_ptr(I));
-    glUniform1f(m_blurProg["nearFocus"], 0.0f);
-    glUniform1f(m_blurProg["farFocus"], 0.99f);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
-
+    // blend the reflections into the water
+    glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFbo);
+    glViewport(0, 0, m_sceneWidth, m_sceneHeight);
     glEnable(GL_STENCIL_TEST);
     glEnable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
@@ -240,15 +220,18 @@ void Scene::render() {
     glActiveTexture(GL_TEXTURE0);
     m_texReflectedScene.bind();
     glUniform1i(m_alphatextureProg2["sampler"], 0);
-    //glm::mat3 I(1.0f);
+    glm::mat3 I(1.0f);
     glUniformMatrix3fv(m_alphatextureProg2["M"], 1, GL_FALSE, glm::value_ptr(I));
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 
-    //glBindFramebuffer(GL_READ_FRAMEBUFFER, m_reflectedFbo);
-    //glBlitFramebuffer(0,0,640,360, 0, 0, 640, 360, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-
     if (m_binoMode) {
+        //apply the blur
+        blur(m_sceneFbo, m_texSceneDepth, m_texScene, 0);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, m_defaultFboW, m_defaultFboH);
+        glEnable(GL_BLEND);
         m_alphatextureProg.use();
         glBindVertexArray(m_alphatVao);
         glActiveTexture(GL_TEXTURE0);
@@ -261,6 +244,74 @@ void Scene::render() {
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindVertexArray(0);
     }
+    else {
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_sceneFbo);
+        glBlitFramebuffer(0, 0, m_sceneWidth, m_sceneHeight, 0, 0, m_defaultFboW, m_defaultFboH, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    }
+}
+
+void Scene::blur(GLuint srcFbo, const Texture& srcDepthBuffer, const Texture& srcColourBuffer, GLuint dstFbo) {
+    glm::mat3 I(1.0f);
+    
+    // Downsample the scene
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_blurFbos[0]);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFbo);
+    glBlitFramebuffer(0, 0, m_sceneWidth, m_sceneHeight, 0, 0, m_sceneWidth / 2, m_sceneHeight / 2, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+
+    // Blur horizontal
+    glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_STENCIL_TEST);
+    m_gaussianProg.use();
+    glBindFramebuffer(GL_FRAMEBUFFER, m_blurFbos[1]);
+    glViewport(0, 0, m_sceneWidth / 2, m_sceneHeight / 2);
+    glBindVertexArray(m_alphatVao);
+    glActiveTexture(GL_TEXTURE0);
+    m_texBlurs[0].bind();
+    glUniform1i(m_gaussianProg["colourIn"], 0);
+    glUniform1i(m_gaussianProg["isHorizontal"], 1);
+    glUniformMatrix3fv(m_gaussianProg["M"], 1, GL_FALSE, glm::value_ptr(I));
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    // Blur vertical
+    glBindFramebuffer(GL_FRAMEBUFFER, m_blurFbos[0]);
+    glActiveTexture(GL_TEXTURE0);
+    m_texBlurs[1].bind();
+    glUniform1i(m_gaussianProg["isHorizontal"], 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, dstFbo);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glViewport(0, 0, m_defaultFboW, m_defaultFboH);
+    if (m_cam.m_aspect < 2.0f) {
+        glEnable(GL_SCISSOR_TEST);
+        GLint scissorX = 0;
+        GLint scissorY = int((-0.5f * m_cam.m_aspect / 2.0f + 0.5f) * m_defaultFboH) + 2;
+        GLint scissorW = m_defaultFboW;
+        GLint scissorH = int(0.5f * m_cam.m_aspect * m_defaultFboH) - 4;
+        glScissor(scissorX, scissorY, scissorW, scissorH);
+    }
+    m_blurProg.use();
+    glBindVertexArray(m_alphatVao);
+    glActiveTexture(GL_TEXTURE0);
+    m_texBlurs[0].bind();
+    glUniform1i(m_blurProg["blurryColourIn"], 0);
+    glActiveTexture(GL_TEXTURE1);
+    srcColourBuffer.bind();
+    glUniform1i(m_blurProg["sharpColourIn"], 1);
+    glActiveTexture(GL_TEXTURE2);
+    srcDepthBuffer.bind();
+    glUniform1i(m_blurProg["depthIn"], 2);
+    glUniformMatrix3fv(m_blurProg["M"], 1, GL_FALSE, glm::value_ptr(I));
+    glUniform1f(m_blurProg["nearClip"], m_cam.m_nearZ);
+    glUniform1f(m_blurProg["farClip"], m_cam.m_farZ);
+    glUniform1f(m_blurProg["kBlurry"], 10.0f);
+    glUniform1f(m_blurProg["focusDistance"], 3.0f);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    glDisable(GL_SCISSOR_TEST);
 }
 
 void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow, float alpha) {
