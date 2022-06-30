@@ -14,7 +14,7 @@ Scene::Scene() :
     m_bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs"),
     m_alphatextureProg("shaders/alphatexture.vs", "shaders/alphatexture.fs"),
     m_alphatextureProg2("shaders/alphatexture.vs", "shaders/alphatexture2.fs"),
-    m_blurProg("shaders/alphatexture.vs", "shaders/dofBlur2.fs"),
+    m_blurProg("shaders/alphatexture.vs", "shaders/dofBlur.fs"),
     m_gaussianProg("shaders/alphatexture.vs", "shaders/gaussianBlur.fs"),
     m_shadowProg("shaders/shadow.vs", "shaders/shadow.fs"),
 	m_tree("models/simpletree.obj"),
