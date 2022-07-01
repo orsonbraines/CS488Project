@@ -37,7 +37,8 @@ Scene::Scene() :
 	// load textures
 	m_tex123456.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
 	m_tex123456.loadDDS("textures/123456.dds");
-	m_texHeightmap.loadBMP("textures/heightmap.bmp");
+    m_texHeightmap.loadRaw("textures/noise", GL_R8, GL_RED, GL_UNSIGNED_BYTE, 1024, 1024, false);
+    //m_texHeightmap.loadBMP("textures/heightmap.bmp");
 	m_texBmapHeightfield.setWrapS(GL_MIRRORED_REPEAT);
 	m_texBmapHeightfield.setWrapT(GL_MIRRORED_REPEAT);
 	m_texBmapHeightfield.loadBMP("textures/heightfield.bmp");

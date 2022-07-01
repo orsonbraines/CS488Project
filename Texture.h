@@ -3,6 +3,8 @@
 #include <string>
 #include <GL/glew.h>
 
+#include "Types.h"
+
 class Texture {
 public:
 	Texture();
@@ -15,6 +17,7 @@ public:
 	void setBorderColour(float r, float g, float b, float a);
 	void loadBMP(const std::string& texFilePath);
 	void loadDDS(const std::string& texFilePath);
+	void loadRaw(const std::string& texFilePath, GLenum internalFormat, GLenum format, GLenum type, uint width, uint height, bool genMips);
 	GLuint getId() const { return m_texId; }
 private:
 	GLuint m_texId;

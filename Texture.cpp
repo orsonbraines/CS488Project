@@ -179,6 +179,55 @@ void Texture::loadDDS(const std::string& texFilePath) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void Texture::loadRaw(const std::string& texFilePath, GLenum internalFormat, GLenum format, GLenum type, uint width, uint height, bool genMips) {
+	std::ifstream in(texFilePath, std::ios_base::binary);
+	if (!in) {
+		throw GraphicsException("Unable to open: " + texFilePath);
+	}
+
+	switch (internalFormat) {
+	case GL_R8:
+		break;
+	default:
+		throw GraphicsException("currently unsupported raw texture internal format");
+	}
+
+	size_t size;
+	switch (format) {
+	case GL_RED:
+		size = width * height;
+		break;
+	default:
+		throw GraphicsException("currently unsupported raw texture format");
+	}
+
+	switch (type) {
+	case GL_UNSIGNED_BYTE:
+		size *= 1;
+		break;
+	default:
+		throw GraphicsException("currently unsupported raw texture data type");
+	}
+
+	char* buffer = new char[size];
+	in.read(buffer, size);
+	if (!in) {
+		throw GraphicsException("error reading tex data");
+	}
+
+	glBindTexture(GL_TEXTURE_2D, m_texId);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, type, (void*) buffer);
+
+	delete[] buffer;
+
+	if (genMips) {
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 Texture::~Texture() {
 	glDeleteTextures(1, &m_texId);
 }
