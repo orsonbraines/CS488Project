@@ -26,3 +26,14 @@ private:
 	GLint m_wrapS;
 	GLint m_wrapT;
 };
+
+class CubemapTexture {
+public:
+	CubemapTexture();
+	~CubemapTexture();
+	void bind() const;
+	void loadDDS(const std::string& texFilePath, GLenum targetFace);
+	GLuint getId() const { return m_texId; }
+private:
+	GLuint m_texId;
+};

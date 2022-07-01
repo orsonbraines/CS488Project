@@ -45,12 +45,12 @@ Scene::Scene() :
 
 	// Set the model instance transforms
 	m_tree1.transform(glm::scale(glm::vec3(0.5f, 1.0f, 0.5f)));
-	m_tree1.transform(glm::translate(glm::vec3(2.0f, 2.0f, -2.0f)));
+	m_tree1.transform(glm::translate(glm::vec3(2.0f, 0.0f, -2.0f)));
 	m_cube1.transform(glm::scale(glm::vec3(0.5f, 0.5f, 0.5f)));
 	m_cube1.transform(glm::translate(glm::vec3(4.0f, 0.0f, 0.0f)));
 	m_cyl1.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)));
 	m_cyl1.transform(glm::scale(glm::vec3(0.3f, 4.0f, 0.3f)));
-	m_cyl1.transform(glm::translate(glm::vec3(3.0f, 2.0f, 1.0f)));
+	m_cyl1.transform(glm::translate(glm::vec3(3.0f, 0.0f, 1.0f)));
 
 	// I don't have a mesh/geometry class for this alpha texture yet
 	// alphat mesh
@@ -143,7 +143,7 @@ Scene::~Scene() {
 }
 
 void Scene::render() {
-    m_sun.tick(0.004f);
+    //m_sun.tick(0.004f);
 
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_STENCIL_TEST);
@@ -187,6 +187,12 @@ void Scene::render() {
     glDisable(GL_STENCIL_TEST);
     glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
+    glDepthFunc(GL_LEQUAL);
+    glDisable(GL_CULL_FACE);
+    m_skybox.draw(m_cam.getP() * glm::mat4(glm::mat3(m_cam.getV())));
+    glEnable(GL_CULL_FACE);
+    glDepthFunc(GL_LESS);
+
     m_smoke.tick();
     glDepthMask(GL_FALSE); // smoke should not overwrite the depth buffer
     renderSmoke(m_cam.getP(), m_cam.getV());
@@ -201,8 +207,8 @@ void Scene::render() {
     glCullFace(GL_FRONT); // the faces will reverse direction when reflected
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-    renderObjects(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), false, 0.5f);
-    renderGround(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.5f);
+    renderObjects(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), false, 0.3f);
+    renderGround(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.3f);
     glDisable(GL_CLIP_DISTANCE0);
     glCullFace(GL_BACK);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -307,7 +313,7 @@ void Scene::blur(GLuint srcFbo, const Texture& srcDepthBuffer, const Texture& sr
     glUniformMatrix3fv(m_blurProg["M"], 1, GL_FALSE, glm::value_ptr(I));
     glUniform1f(m_blurProg["nearClip"], m_cam.m_nearZ);
     glUniform1f(m_blurProg["farClip"], m_cam.m_farZ);
-    glUniform1f(m_blurProg["kBlurry"], 10.0f);
+    glUniform1f(m_blurProg["kBlurry"], 2.0f);
     glUniform1f(m_blurProg["focusDistance"], 3.0f);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
@@ -429,7 +435,7 @@ void Scene::renderWater(const glm::mat4& P, const glm::mat4& V) {
     glUniform3f(m_waterProg["Kd"], 0.1f, 0.1f, 0.9f);
 
     glUniform1f(m_waterProg["plane"], m_reflectionPlane / scaleY);
-    glUniform1f(m_waterProg["maxAlphaDepth"], 0.05f);
+    glUniform1f(m_waterProg["maxAlphaDepth"], 0.25f);
     m_gridMesh.draw();
 
 }

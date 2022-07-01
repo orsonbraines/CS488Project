@@ -11,6 +11,7 @@
 #include "SmokeSystem.h"
 #include "Sun.h"
 #include "Flashlight.h"
+#include "Skybox.h"
 
 class Scene {
 public:
@@ -64,6 +65,7 @@ private:
 	Cylinder m_cylinder;
 	CylinderInstance m_cyl1;
 	SmokeSystem m_smoke;
+	Skybox m_skybox;
 
 	GLuint m_alphatVao, m_alphatVbo;
 

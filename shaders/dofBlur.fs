@@ -17,7 +17,7 @@ void main() {
 	z = z * 2.0 - 1.0;
 	z = 2.0 * nearClip * farClip / (farClip + nearClip - z * (farClip - nearClip));
 
-	float blurriness = clamp(kBlurry * abs(z - focusDistance) / (z * focusDistance), 0.0, 1.00);
+	float blurriness = clamp(kBlurry * abs(z - focusDistance) / z, 0.0, 1.00);
 
 	colour = mix(texture(sharpColourIn, fs_uv), texture(blurryColourIn, fs_uv), blurriness);
 }

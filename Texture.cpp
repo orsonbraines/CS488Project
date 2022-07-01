@@ -6,6 +6,88 @@
 #include "Texture.h"
 #include "Util.h"
 
+static void sLoadDDS(const std::string& texFilePath, GLenum target, int* mipsOut) {
+	std::ifstream in(texFilePath, std::ios_base::binary);
+	if (!in) {
+		throw GraphicsException("Unable to open: " + texFilePath);
+	}
+	char magic[4];
+	in.read(magic, 4);
+	if (!in || strncmp(magic, "DDS ", 4) != 0) {
+		throw GraphicsException("Bad magic number");
+	}
+
+	i32 header[31];
+	in.read((char*)header, sizeof(header));
+	int height = header[2];
+	int width = header[3];
+	int linearSize = header[4];
+	int mips = header[6];
+	int pixelFormatFlags = header[19];
+	int fourCC = header[20];
+
+	DBG(std::cerr << "(h,w,mips) " << height << "," << width << "," << mips << std::endl);
+	DBG(std::cerr << "dwPitchOrLinearSize " << linearSize << std::endl);
+	DBG(std::cerr << "pixelFormatFlags " << pixelFormatFlags << std::endl);
+
+	u32 textureFormat = 0;
+	if (pixelFormatFlags & 4) {
+		if (strncmp((char*)&fourCC, "DXT1", 4) == 0) {
+			textureFormat = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+		}
+		else if (strncmp((char*)&fourCC, "DXT3", 4) == 0) {
+			DBG(std::cerr << "found DXT3 encoded texture" << std::endl);
+			textureFormat = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+		}
+		else if (strncmp((char*)&fourCC, "DXT5", 4) == 0) {
+			textureFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		}
+	}
+
+	if (!textureFormat) {
+		throw GraphicsException("Texture format not supported");
+	}
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	if (target == GL_TEXTURE_2D) {
+		glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
+		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, mips - 1);
+	}
+
+	uint w = width;
+	uint h = height;
+	uint blockSize = textureFormat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ? 8 : 16;
+	uint size = w * h / 16 * blockSize;
+	assert(size == linearSize);
+	assert(w == h);
+	assert(w > 0 && h > 0);
+	assert(((w - 1) & w) == 0);
+	assert(((h - 1) & h) == 0);
+	char* buf = new char[size];
+
+	for (int i = 0; i < mips; ++i) {
+		DBG(std::cerr << w << " " << h << std::endl);
+		in.read(buf, size);
+		glCompressedTexImage2D(target, i, textureFormat, w, h, 0, size, buf);
+		// this simplified math will only work if all sizes are powers of 2 and at least 4 texels in both dimensions
+		w >>= 1;
+		h >>= 1;
+		if (size > blockSize) {
+			size >>= 2;
+		}
+	}
+
+	delete[] buf;
+
+	if (!in) {
+		throw GraphicsException("Error reading in compressed texture data");
+	}
+
+	if (mipsOut) {
+		*mipsOut = mips;
+	}
+}
+
 Texture::Texture() : m_texId(0), m_minFilter(GL_LINEAR), m_magFilter(GL_LINEAR), m_wrapS(GL_CLAMP_TO_EDGE), m_wrapT(GL_CLAMP_TO_EDGE) {
 	glGenTextures(1, &m_texId);
 	glBindTexture(GL_TEXTURE_2D, m_texId);
@@ -14,19 +96,6 @@ Texture::Texture() : m_texId(0), m_minFilter(GL_LINEAR), m_magFilter(GL_LINEAR),
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, m_wrapS);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, m_wrapT);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	
-	//size_t dot = texFilePath.find('.');
-	//assert(dot != std::string::npos);
-	//std::string ext = texFilePath.substr(dot + 1);
-	//if (ext == "dds") {
-	//	loadDDS(texFilePath);
-	//}
-	//else if (ext == "bmp") {
-	//	loadBMP(texFilePath);
-	//}
-	//else {
-	//	throw GraphicsException("Unrecognized texture file extension: " + ext);
-	//}
 }
 
 void Texture::setMinFilter(GLint minFilter) {
@@ -101,81 +170,8 @@ void Texture::loadBMP(const std::string& texFilePath) {
 }
 
 void Texture::loadDDS(const std::string& texFilePath) {
-	std::ifstream in(texFilePath, std::ios_base::binary);
-	if (!in) {
-		throw GraphicsException("Unable to open: " + texFilePath);
-	}
-	char magic[4];
-	in.read(magic, 4);
-	if (!in || strncmp(magic, "DDS ", 4) != 0) {
-		throw GraphicsException("Bad magic number");
-	}
-
-	i32 header[31];
-	in.read((char*)header, sizeof(header));
-	int height = header[2];
-	int width = header[3];
-	int linearSize = header[4];
-	int mips = header[6];
-	int pixelFormatFlags = header[19];
-	int fourCC = header[20];
-
-	DBG(std::cerr << "(h,w,mips) " << height << "," << width << "," << mips << std::endl);
-	DBG(std::cerr << "dwPitchOrLinearSize " << linearSize << std::endl);
-	DBG(std::cerr << "pixelFormatFlags " << pixelFormatFlags << std::endl);
-
-	u32 textureFormat = 0;
-	if (pixelFormatFlags & 4) {
-		if (strncmp((char*)&fourCC, "DXT1", 4) == 0) {
-			textureFormat = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-		}
-		else if (strncmp((char*)&fourCC, "DXT3", 4) == 0) {
-			DBG(std::cerr << "found DXT3 encoded texture" << std::endl);
-			textureFormat = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-		}
-		else if (strncmp((char*)&fourCC, "DXT5", 4) == 0) {
-			textureFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-		}
-	}
-
-	if (!textureFormat) {
-		throw GraphicsException("Texture format not supported");
-	}
-
 	glBindTexture(GL_TEXTURE_2D, m_texId);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mips - 1);
-
-	uint w = width;
-	uint h = height;
-	uint blockSize = textureFormat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ? 8 : 16;
-	uint size = w * h / 16 * blockSize;
-	assert(size == linearSize);
-	assert(w == h);
-	assert(w > 0 && h > 0);
-	assert(((w - 1) & w) == 0);
-	assert(((h - 1) & h) == 0);
-	char* buf = new char[size];
-
-	for (int i = 0; i < mips; ++i) {
-		DBG(std::cerr << w << " " << h << std::endl);
-		in.read(buf, size);
-		glCompressedTexImage2D(GL_TEXTURE_2D, i, textureFormat, w, h, 0, size, buf);
-		// this simplified math will only work if all sizes are powers of 2 and at least 4 texels in both dimensions
-		w >>= 1;
-		h >>= 1;
-		if (size > blockSize) {
-			size >>= 2;
-		}
-	}
-
-	delete[] buf;
-
-	if (!in) {
-		throw GraphicsException("Error reading in compressed texture data");
-	}
-
+	sLoadDDS(texFilePath, GL_TEXTURE_2D, nullptr);
 	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
@@ -234,4 +230,32 @@ Texture::~Texture() {
 
 void Texture::bind() const {
 	glBindTexture(GL_TEXTURE_2D, m_texId);
+}
+
+CubemapTexture::CubemapTexture() {
+	glGenTextures(1, &m_texId);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_texId);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+}
+
+CubemapTexture::~CubemapTexture() {
+	glDeleteTextures(1, &m_texId);
+}
+
+void CubemapTexture::bind() const {
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_texId);
+}
+
+void CubemapTexture::loadDDS(const std::string& texFilePath, GLenum targetFace) {
+	glBindTexture(GL_TEXTURE_CUBE_MAP, m_texId);
+	int mips;
+	sLoadDDS(texFilePath, targetFace, &mips);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAX_LEVEL, mips - 1);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 }
