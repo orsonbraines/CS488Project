@@ -253,7 +253,7 @@ void Scene::render() {
 
 void Scene::blur(GLuint srcFbo, const Texture& srcDepthBuffer, const Texture& srcColourBuffer, GLuint dstFbo) {
     glm::mat3 I(1.0f);
-    
+
     // Downsample the scene
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_blurFbos[0]);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFbo);
@@ -318,7 +318,7 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow,
     if (isShadow) {
         m_shadowProg.use();
         setShadowPVM(P, V, m_cube1.getM());
-        m_cube1.setUniformLocations(-1, -1, -1);  
+        m_cube1.setUniformLocations(-1, -1, -1);
     }
     else {
         m_textureKdProg.use();

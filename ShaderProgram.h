@@ -13,5 +13,4 @@ public:
 	GLint operator[](const std::string &s) const;
 private:
 	GLuint m_programId;
-	std::map<std::string, GLint> m_uniforms;
 };

@@ -49,9 +49,6 @@ void main() {
 	colour = vec4(0.0);
 	for(int i=0; i < numSamples; ++i) {
 		int displacement = i - (numSamples / 2);
-		//colour += texture(colourIn, fs_uv + float(displacement) * d) * weights[i];
 		colour += texture(colourIn, fs_uv + float(displacement) * d) * weights[i];
 	}
-
-	colour;// /= float(numSamples);
 }

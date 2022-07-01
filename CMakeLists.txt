@@ -31,3 +31,5 @@ if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
 else()
 	message(STATUS "Non Debug build")
 endif()
+
+add_executable(PerlinNoise "PerlinNoise.cpp")
