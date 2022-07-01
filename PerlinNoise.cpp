@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <array>
 #include <vector>
+#include <cassert>
+#include <string>
+#include <cstring>
 #include <glm/ext.hpp>
 
 using namespace std;
@@ -12,78 +15,121 @@ using namespace glm;
 typedef unsigned uint;
 
 unsigned seed;
+mt19937 randGen;
+
 
 float smoothIntperolate (float a, float b, float t) {
 	if(t <= 0.0f) return a;
-	if(t >= 0.0f) return b;
+	if(t >= 1.0f) return b;
 	// 6t**5 - 15t**4 + 10t**3
 	float u = ((6.0f * t  - 15.0f) * t + 10.0f) * t * t * t;
 
 	return a * (1.0f-u) + b * u;
 }
 
-int hashPoint(int x, int y, const vector<int> &P, const int nGradients) {
-	return P[(P[x] + y) % P.size()] % nGradients;
-}
+class Perlin {
+public:
+	Perlin(uint nCells);
+	float operator()(float x, float y);
+private:
+	uint nCells;
+	vector<vector<vec2>> m_gradients;
+};
 
-float dotGradient(int gridX, int gridY, float x, float y, const vec2 &grad) {
-	return dot(vec2(x - gridX, y - gridY), grad);
-}
-
-vector<unsigned char> noise(int nCells, int samplesPerCell) {
-	// permutation array
-	vector<int> P;
+Perlin::Perlin(uint nCells) : nCells(nCells) {
+	uniform_real_distribution<float> thetaDist(0.0f, 2 * pi<float>());
 	for (int i = 0; i <= nCells; ++i) {
-		P.push_back(i);
+		m_gradients.push_back(vector<vec2>());
+		for (int j = 0; j <= nCells; ++j) {
+			float theta = thetaDist(randGen);
+			m_gradients.back().push_back(vec2(cos(theta), sin(theta)));
+		}
 	}
-	// random number generator
-	mt19937 r(seed);
-	shuffle(P.begin(), P.end(), r);
+}
 
-	float s2 = glm::inversesqrt(2.0f);
-	uniform_real_distribution<float> thetaDist(0, 2.0f * glm::pi<float>());
+float Perlin::operator()(float x, float y) {
+	assert(x >= 0.0 && y >= 0.0f && x < float(nCells) && y < float(nCells));
+	int gridX = int(x);
+	int gridY = int(y);
+	float fracX = x - gridX;
+	float fracY = y - gridY;
+	float dot00 = dot(m_gradients[gridX][gridY], vec2(fracX, fracY));
+	float dot10 = dot(m_gradients[gridX+1][gridY], vec2(fracX - 1.0f, fracY));
+	float dot01 = dot(m_gradients[gridX][gridY + 1], vec2(fracX, fracY - 1.0f));
+	float dot11 = dot(m_gradients[gridX + 1][gridY + 1], vec2(fracX - 1.0f, fracY - 1.0f));
+	float interp0 = smoothIntperolate(dot00, dot10, fracX);
+	float interp1 = smoothIntperolate(dot01, dot11, fracX);
+	return smoothIntperolate(interp0, interp1, fracY);
+}
 
-	const int nGradients = 16;
-	array<vec2, nGradients> gradients;
-	for (int i = 0; i < nGradients; ++i) {
-		float theta = thetaDist(r);
-		gradients[i] = vec2(cos(theta), sin(theta));
+void writeBMP(const string& fileName, uint w, uint h, char* data) {
+	unsigned short header[27];
+	memset(header, 0, sizeof(header));
+	uint colourTable[256];
+	uint dataSize = w * h;
+	uint fileSize = sizeof(header) + sizeof(colourTable) + dataSize;
+	header[0] = 0x4d42; // magic number
+	header[1] = fileSize & 0xffff; // file size lower bytes
+	header[2] = fileSize >> 16; // // file size upper bytes
+	header[5] = sizeof(header) + sizeof(colourTable); // data offset
+	header[7] = 40; // size of info header
+	header[9] = w; // width
+	header[11] = h; // height
+	header[13] = 1; // number of colour planes
+	header[14] = 8; // bits per pixel
+	header[15] = 0; // no compression
+	header[19] = 2834; // horizontal resolution
+	header[21] = 2834; // vertical resolution
+	header[23] = 256; // number of colours
+	for (uint i = 0; i < 256; ++i) {
+		colourTable[i] = i | (i << 8) | (i << 16);
 	}
 
-	vector<unsigned char> result(nCells* nCells*samplesPerCell* samplesPerCell);
+	ofstream o(fileName, ios::binary);
+	assert(o);
+	o.write((char*)header, sizeof(header));
+	o.write((char*)colourTable, sizeof(colourTable));
+	o.write(data, dataSize);
+}
+
+char* genNoiseGrid(int nCells, int samplesPerCell) {
+	float* grid = new float[nCells * nCells * samplesPerCell * samplesPerCell];
 	int idx = 0;
-
-	for (int y = 0; y < nCells; ++y) {
-		for (int x = 0; x < nCells; ++x) {
-			vec2 g00 = gradients[hashPoint(x, y, P, nGradients)];
-			vec2 g01 = gradients[hashPoint(x, y+1, P, nGradients)];
-			vec2 g10 = gradients[hashPoint(x+1, y, P, nGradients)];
-			vec2 g11 = gradients[hashPoint(x+1, y+1, P, nGradients)];
-			for (int fy = 0; fy < samplesPerCell; ++fy) {
-				for (int fx = 0; fx < samplesPerCell; ++fx) {
-					float fracX = float(fx) / samplesPerCell;
-					float fracY = float(fy) / samplesPerCell;
-					float dot00 = dotGradient(x, y, x + fracX, x + fracY, g00);
-					float dot01 = dotGradient(x, y + 1, x + fracX, x + fracY, g01);
-					float dot10 = dotGradient(x + 1, y, x + fracX, x + fracY, g10);
-					float dot11 = dotGradient(x + 1, y + 1, x + fracX, x + fracY, g11);
-					float lerp1 = smoothIntperolate(dot00, dot10, fracX);
-					float lerp2 = smoothIntperolate(dot01, dot11, fracX);
-					float bilerp = smoothIntperolate(lerp1, lerp2, fracY);
-					int ax = x * samplesPerCell + fx;
-					int ay = y * samplesPerCell + fy;
-					result[ay * nCells * samplesPerCell + ax] = unsigned char(bilerp * 128.0f + 127.0f);
-				}
-			}
+	Perlin p(nCells);
+	uniform_real_distribution<float> sampleOffset(0.0f, 1.0f / samplesPerCell);
+	float minNoise = 100.0f;
+	float maxNoise = -100.0f;
+	for (int i = 0; i < nCells * samplesPerCell; ++i) {
+		for (int j = 0; j < nCells * samplesPerCell; ++j) {
+			float y = i / float(samplesPerCell) + sampleOffset(randGen);
+			float x = j / float(samplesPerCell) + sampleOffset(randGen);
+			float n = p(x, y);
+			grid[idx++] = n;
+			minNoise = glm::min(minNoise, n);
+			maxNoise = glm::max(maxNoise, n);
 		}
 	}
 
-	return result;
+	char* cgrid = new char[nCells * nCells * samplesPerCell * samplesPerCell];
+
+	for (int i = 0; i < nCells * nCells * samplesPerCell * samplesPerCell; ++i) {
+		cgrid[i] = char((grid[i] - minNoise) / (maxNoise - minNoise) * 255.0f);
+	}
+
+	delete[] grid;
+
+	return cgrid;
 }
 
 int main(int argc, char **argv) {
-	seed = 32478959;
-	vector<unsigned char> noiseData = noise(16,64);
-	ofstream o("textures/noise");
-	o.write((char*)noiseData.data(), noiseData.size());
+	seed = 2345234453;
+	randGen = mt19937(seed);
+
+	int nCells = 4;
+	int samplesPerCell = 64;
+	char* data = genNoiseGrid(nCells, samplesPerCell);
+	
+	writeBMP("textures/noise.bmp", nCells*samplesPerCell, nCells * samplesPerCell, data);
+
+	delete[] data;
 }
