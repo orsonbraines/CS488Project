@@ -12,10 +12,10 @@ Scene::Scene() :
     m_hmapProg("shaders/hmap.vs", "shaders/constantKd.fs"),
     m_waterProg("shaders/water.vs", "shaders/constantKd.fs"),
     m_bumpmapProg("shaders/bumpmap.vs", "shaders/bumpmap.fs"),
-    m_alphatextureProg("shaders/alphatexture.vs", "shaders/alphatexture.fs"),
-    m_alphatextureProg2("shaders/alphatexture.vs", "shaders/alphatexture2.fs"),
-    m_blurProg("shaders/alphatexture.vs", "shaders/dofBlur.fs"),
-    m_gaussianProg("shaders/alphatexture.vs", "shaders/gaussianBlur.fs"),
+    m_alphatextureProg("shaders/2dTexture.vs", "shaders/2dAlphaTexture.fs"),
+    m_colourTextureProg("shaders/2dTexture.vs", "shaders/2dColourTexture.fs"),
+    m_blurProg("shaders/2dTexture.vs", "shaders/dofBlur.fs"),
+    m_gaussianProg("shaders/2dTexture.vs", "shaders/gaussianBlur.fs"),
     m_shadowProg("shaders/shadow.vs", "shaders/shadow.fs"),
 	m_tree("models/simpletree.obj"),
 	m_tree1(&m_tree),
@@ -143,7 +143,7 @@ Scene::~Scene() {
 }
 
 void Scene::render() {
-    //m_sun.tick(0.004f);
+    m_sun.tick(0.004f);
 
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_STENCIL_TEST);
@@ -221,13 +221,13 @@ void Scene::render() {
     glDisable(GL_DEPTH_TEST);
     glStencilFunc(GL_LEQUAL, 1, 0xff);
     glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-    m_alphatextureProg2.use();
+    m_colourTextureProg.use();
     glBindVertexArray(m_alphatVao);
     glActiveTexture(GL_TEXTURE0);
     m_texReflectedScene.bind();
-    glUniform1i(m_alphatextureProg2["sampler"], 0);
+    glUniform1i(m_colourTextureProg["sampler"], 0);
     glm::mat3 I(1.0f);
-    glUniformMatrix3fv(m_alphatextureProg2["M"], 1, GL_FALSE, glm::value_ptr(I));
+    glUniformMatrix3fv(m_colourTextureProg["M"], 1, GL_FALSE, glm::value_ptr(I));
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
 
@@ -247,6 +247,7 @@ void Scene::render() {
         binoM[0][0] = 1.0f;
         binoM[1][1] = 0.5f * m_cam.m_aspect;
         glUniformMatrix3fv(m_alphatextureProg["M"], 1, GL_FALSE, glm::value_ptr(binoM));
+        glUniform3f(m_alphatextureProg["colour"], 0, 0, 0);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glBindVertexArray(0);
     }

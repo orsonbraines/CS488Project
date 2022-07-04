@@ -18,7 +18,8 @@ public:
 	Scene();
 	~Scene();
 	void render();
-	Flashlight& getFlashlight() { return m_flashlight;  }
+	Flashlight& getFlashlight() { return m_flashlight; }
+	float getDaytime() { return m_sun.getTime(); }
 
 	Camera m_cam;
 	bool m_binoMode;
@@ -41,7 +42,7 @@ private:
 		m_hmapProg, 
 		m_bumpmapProg, 
 		m_alphatextureProg,
-		m_alphatextureProg2,
+		m_colourTextureProg,
 		m_blurProg,
 		m_gaussianProg,
 		m_shadowProg,

@@ -10,6 +10,7 @@
 #include "Util.h"
 #include "ShaderProgram.h"
 #include "Scene.h"
+#include "UI.h"
 
 
 int main(int ArgCount, char** Args)
@@ -59,6 +60,7 @@ int main(int ArgCount, char** Args)
         glDebugMessageCallback(loggingCallback, nullptr);
 
         Scene scene;
+        UI ui(&scene);
 
         bool running = true;
         while (running)
@@ -143,8 +145,10 @@ int main(int ArgCount, char** Args)
             scene.m_cam.m_aspect = aspectRatio;
             scene.m_defaultFboW = framebuffer_w;
             scene.m_defaultFboH = framebuffer_h;
+            ui.setFbSize(framebuffer_w, framebuffer_h);
             
             scene.render();
+            ui.draw();
 
             SDL_GL_SwapWindow(window);
         }

@@ -14,6 +14,7 @@ public:
 	void setPhi(float phi) { m_phi = phi; }
 	float getTheta() const;
 	float getPhi() const { return m_phi; }
+	float getTime() { return m_time; }
 	void tick(float t);
 private:
 	float m_phi;
