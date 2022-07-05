@@ -144,7 +144,7 @@ void Texture::loadBMP(const std::string& texFilePath) {
 		throw GraphicsException("error reading bmp");
 	}
 
-	uint hdr2Size = *(u32*)(buf + 14);
+	uint hdr2Size = *(ushort*)(buf + 14);
 	assert(hdr2Size == 40 || hdr2Size == 124);
 	uint width = *(ushort*)(buf + 18);
 	uint height = *(ushort*)(buf + 22);

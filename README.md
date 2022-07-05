@@ -25,3 +25,9 @@ For the glm headers to be recognized you need to copy FindGLM.cmake from https:/
 `cd out`
 
 `make`
+
+# Assets
+
+## Fonts
+
+I generated the font texture using the Codehead’s Bitmap Font Generator tool found at http://www.codehead.co.uk/cbfg/

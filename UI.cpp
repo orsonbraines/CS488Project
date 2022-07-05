@@ -2,8 +2,23 @@
 #include <glm/ext.hpp>
 
 #include "UI.h"
+#include "Util.h"
 
-UI::UI(Scene* scene) : m_prog("shaders/2dColour.vs", "shaders/2dColour.fs"), m_scene(scene), m_clockSubdivisions(60), m_aspectRatio(1.0f), m_fbWidth(1), m_fbHeight(1) {
+UI::UI(Scene* scene) :
+	m_prog("shaders/2dColour.vs", "shaders/2dColour.fs"),
+	m_textProg("shaders/2dTexture.vs", "shaders/2dAlphaTexture.fs"),
+	m_texFont(),
+	m_scene(scene),
+	m_clockSubdivisions(60), 
+	m_aspectRatio(1.0f), 
+	m_fbWidth(1), 
+	m_fbHeight(1),
+	m_textDataVboSize(2048)
+{
+	m_texFont.setMagFilter(GL_NEAREST);
+	m_texFont.setMinFilter(GL_NEAREST);
+	m_texFont.loadBMP("textures/font.bmp");
+
 	glGenVertexArrays(1, &m_vao);
 	glBindVertexArray(m_vao);
 	glGenBuffers(1, &m_vbo);
@@ -45,6 +60,54 @@ UI::UI(Scene* scene) : m_prog("shaders/2dColour.vs", "shaders/2dColour.fs"), m_s
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 
+	glGenVertexArrays(1, &m_textVao);
+	glBindVertexArray(m_textVao);
+	glGenBuffers(1, &m_textVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, m_textVbo);
+
+	//unsigned char c = 'C';
+	//// in uv coords
+	//float charWidth = 10.0f / 512.0f;
+	//float charTop = 4.0f / 256.0f;
+	//float charBot = 20.0f / 256.0f;
+
+	// x,y,u,v
+	//m_textData.push_back(-0.5f / (16.0f / 9.0f));
+	//m_textData.push_back(-0.5f);
+	//m_textData.push_back((c & 0xf) / 16.0f);
+	//m_textData.push_back((c >> 4) / 8.0f - charBot);
+	////m_textData.push_back(0.0f);
+	////m_textData.push_back(0.0f);
+
+	//m_textData.push_back(0.5f / (16.0f / 9.0f));
+	//m_textData.push_back(-0.5f);
+	//m_textData.push_back((c & 0xf) / 16.0f + charWidth);
+	//m_textData.push_back((c >> 4) / 8.0f - charBot);
+	////m_textData.push_back(1.0f);
+	////m_textData.push_back(0.0f);
+
+	//m_textData.push_back(-0.5f / (16.0f / 9.0f));
+	//m_textData.push_back(0.5f);
+	//m_textData.push_back((c & 0xf) / 16.0f);
+	//m_textData.push_back((c >> 4) / 8.0f - charTop);
+	////m_textData.push_back(0.0f);
+	////m_textData.push_back(1.0f);
+
+	//m_textData.push_back(0.5f / (16.0f / 9.0f));
+	//m_textData.push_back(0.5f);
+	//m_textData.push_back((c & 0xf) / 16.0f + charWidth);
+	//m_textData.push_back((c >> 4) / 8.0f - charTop);
+	//m_textData.push_back(1.0f);
+	//m_textData.push_back(1.0f);
+
+	glBufferData(GL_ARRAY_BUFFER, m_textDataVboSize * sizeof(float), nullptr, GL_STREAM_DRAW);
+
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)0);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2*sizeof(float)));
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+
+
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -52,6 +115,8 @@ UI::UI(Scene* scene) : m_prog("shaders/2dColour.vs", "shaders/2dColour.fs"), m_s
 UI::~UI() {
 	glDeleteVertexArrays(1, &m_vao);
 	glDeleteBuffers(1, &m_vbo);
+	glDeleteVertexArrays(1, &m_textVao);
+	glDeleteBuffers(1, &m_textVao);
 }
 
 void UI::setFbSize(int fbWidth, int fbHeight) { 
@@ -87,5 +152,70 @@ void UI::draw() {
 	rotM = M * glm::mat3(glm::vec3(glm::cos(longTheta), -glm::sin(longTheta), 0), glm::vec3(glm::sin(longTheta), glm::cos(longTheta), 0), glm::vec3(0, 0, 1.0f));
 	glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(rotM));
 	glDrawArrays(GL_LINES, m_clockTickOffset + 26, 2);
+
+	m_textProg.use();
+	glBindVertexArray(m_textVao);
+	glBindBuffer(GL_ARRAY_BUFFER, m_textVbo);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, m_textData.size() * sizeof(float), (void*)m_textData.data());
+	glEnable(GL_BLEND);
+	glm::mat3 I(1.0f);
+	glUniformMatrix3fv(m_textProg["M"], 1, GL_FALSE, glm::value_ptr(I));
+	glUniform3f(m_textProg["colour"], 1.0f, 0.0f, 0.0f);
+	glUniform1i(m_textProg["sampler"], 0);
+	glActiveTexture(GL_TEXTURE0);
+	m_texFont.bind();
+	glDrawArrays(GL_TRIANGLES, 0, m_textData.size() / 4);
 	glBindVertexArray(0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	m_textData.clear();
+}
+
+void UI::addText(const std::string& txt, float left, float bot, float scale) {
+	float pixelSizeX = 2.0f / float(m_fbWidth);
+	float pixelSizeY = 2.0f / float(m_fbHeight);
+	float charWidthPix = 10.0f;
+	float charWidthU = charWidthPix / 512.0f;
+	float charTopV = 4.0f / 256.0f;
+	float charBotV = 20.0f / 256.0f;
+	float charHeightPix = 16.0f;
+
+	for (char c : txt) {
+		// 1st triangle
+		m_textData.push_back(left);
+		m_textData.push_back(bot);
+		m_textData.push_back((c & 0xf) / 16.0f);
+		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charBotV);
+
+		m_textData.push_back(left + charWidthPix * pixelSizeX * scale);
+		m_textData.push_back(bot);
+		m_textData.push_back((c & 0xf) / 16.0f + charWidthU);
+		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charBotV);
+
+		m_textData.push_back(left);
+		m_textData.push_back(bot + charHeightPix * pixelSizeY * scale);
+		m_textData.push_back((c & 0xf) / 16.0f);
+		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charTopV);
+
+		// second triangle
+		m_textData.push_back(left);
+		m_textData.push_back(bot + charHeightPix * pixelSizeY * scale);
+		m_textData.push_back((c & 0xf) / 16.0f);
+		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charTopV);
+
+		m_textData.push_back(left + charWidthPix * pixelSizeX * scale);
+		m_textData.push_back(bot);
+		m_textData.push_back((c & 0xf) / 16.0f + charWidthU);
+		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charBotV);
+
+		m_textData.push_back(left + charWidthPix * pixelSizeX * scale);
+		m_textData.push_back(bot + charHeightPix * pixelSizeY * scale);
+		m_textData.push_back((c & 0xf) / 16.0f + charWidthU);
+		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charTopV);
+
+		left += charWidthPix * pixelSizeX * scale;
+	}
+
+	if (m_textData.size() > m_textDataVboSize) {
+		throw GraphicsException("Text overflowwing vbo");
+	}
 }

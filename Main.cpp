@@ -1,6 +1,8 @@
 ﻿#include <cassert>
 #include <iostream>
 #include <vector>
+#include <sstream>
+#include <iomanip>
 #include <SDL.h>
 #include <GL/glew.h>
 #include <SDL_opengl.h>
@@ -15,7 +17,7 @@
 
 int main(int ArgCount, char** Args)
 {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
         std::cerr << "Unable to initialize SDL" << std::endl;
         return 1;
     }
@@ -56,6 +58,8 @@ int main(int ArgCount, char** Args)
     }
 
     try {
+        u64 prevTimestamp = SDL_GetPerformanceCounter();
+        u64 prevFPSTimestamp = 0;
         glEnable(GL_DEBUG_OUTPUT);
         glDebugMessageCallback(loggingCallback, nullptr);
 
@@ -63,8 +67,20 @@ int main(int ArgCount, char** Args)
         UI ui(&scene);
 
         bool running = true;
+        std::string fpsMsg = "FPS: ????";
         while (running)
         {
+            u64 currTimestamp = SDL_GetPerformanceCounter();
+            float frameTime = (currTimestamp - prevTimestamp) / float(SDL_GetPerformanceFrequency());
+            float fps = 1.0f / frameTime;
+            prevTimestamp = currTimestamp;
+            // only update the fps counter every second so it doesn't flicker
+            if (currTimestamp - prevFPSTimestamp > SDL_GetPerformanceFrequency()) {
+                prevFPSTimestamp = currTimestamp;
+                std::ostringstream msgstream;
+                msgstream << std::fixed << std::setprecision(1) << "FPS: " << fps;
+                fpsMsg = msgstream.str();
+            }
             SDL_GetWindowSize(window, &window_w, &window_h);
             SDL_Event e;
             while (SDL_PollEvent(&e))
@@ -146,6 +162,8 @@ int main(int ArgCount, char** Args)
             scene.m_defaultFboW = framebuffer_w;
             scene.m_defaultFboH = framebuffer_h;
             ui.setFbSize(framebuffer_w, framebuffer_h);
+            
+            ui.addText(fpsMsg, -1.0f, 1.0f - 32.0f / framebuffer_h, 1.0f);
             
             scene.render();
             ui.draw();

@@ -9,7 +9,7 @@
 #ifdef DEBUG
 #define DBG(c) c
 #else
-#define DBG(c) void
+#define DBG(c) while(0){}
 #endif
 
 std::string readFile(const std::string &fileName);
