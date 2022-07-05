@@ -41,12 +41,12 @@ Skybox::Skybox() : m_prog("shaders/skybox.vs", "shaders/skybox.fs") {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-	m_tex.loadDDS("textures/skyBoxPX.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_X);
-	m_tex.loadDDS("textures/skyBoxNX.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
-	m_tex.loadDDS("textures/skyBoxPY.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
-	m_tex.loadDDS("textures/skyBoxNY.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
-	m_tex.loadDDS("textures/skyBoxPZ.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
-	m_tex.loadDDS("textures/skyBoxNZ.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
+	m_tex.loadDDS("textures/skyboxPX.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_X);
+	m_tex.loadDDS("textures/skyboxNX.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
+	m_tex.loadDDS("textures/skyboxPY.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
+	m_tex.loadDDS("textures/skyboxNY.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
+	m_tex.loadDDS("textures/skyboxPZ.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
+	m_tex.loadDDS("textures/skyboxNZ.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
 }
 
 Skybox::~Skybox() {
