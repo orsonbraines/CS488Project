@@ -65,41 +65,6 @@ UI::UI(Scene* scene) :
 	glGenBuffers(1, &m_textVbo);
 	glBindBuffer(GL_ARRAY_BUFFER, m_textVbo);
 
-	//unsigned char c = 'C';
-	//// in uv coords
-	//float charWidth = 10.0f / 512.0f;
-	//float charTop = 4.0f / 256.0f;
-	//float charBot = 20.0f / 256.0f;
-
-	// x,y,u,v
-	//m_textData.push_back(-0.5f / (16.0f / 9.0f));
-	//m_textData.push_back(-0.5f);
-	//m_textData.push_back((c & 0xf) / 16.0f);
-	//m_textData.push_back((c >> 4) / 8.0f - charBot);
-	////m_textData.push_back(0.0f);
-	////m_textData.push_back(0.0f);
-
-	//m_textData.push_back(0.5f / (16.0f / 9.0f));
-	//m_textData.push_back(-0.5f);
-	//m_textData.push_back((c & 0xf) / 16.0f + charWidth);
-	//m_textData.push_back((c >> 4) / 8.0f - charBot);
-	////m_textData.push_back(1.0f);
-	////m_textData.push_back(0.0f);
-
-	//m_textData.push_back(-0.5f / (16.0f / 9.0f));
-	//m_textData.push_back(0.5f);
-	//m_textData.push_back((c & 0xf) / 16.0f);
-	//m_textData.push_back((c >> 4) / 8.0f - charTop);
-	////m_textData.push_back(0.0f);
-	////m_textData.push_back(1.0f);
-
-	//m_textData.push_back(0.5f / (16.0f / 9.0f));
-	//m_textData.push_back(0.5f);
-	//m_textData.push_back((c & 0xf) / 16.0f + charWidth);
-	//m_textData.push_back((c >> 4) / 8.0f - charTop);
-	//m_textData.push_back(1.0f);
-	//m_textData.push_back(1.0f);
-
 	glBufferData(GL_ARRAY_BUFFER, m_textDataVboSize * sizeof(float), nullptr, GL_STREAM_DRAW);
 
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4*sizeof(float), (void*)0);
