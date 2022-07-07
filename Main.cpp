@@ -2,7 +2,6 @@
 #include <iostream>
 #include <vector>
 #include <sstream>
-#include <iomanip>
 #include <SDL.h>
 #include <GL/glew.h>
 #include <SDL_opengl.h>
@@ -13,6 +12,18 @@
 #include "ShaderProgram.h"
 #include "Scene.h"
 #include "UI.h"
+
+void addFocusDistanceMessage(UI &ui, float focusDistance) {
+    std::ostringstream msg;
+    msg << "focus distance: " << focusDistance << "m";
+    ui.addMessage(2.0f, "focusDistance", msg.str());
+}
+
+void addTimeRateMessage(UI& ui, float rate) {
+    std::ostringstream msg;
+    msg << "time multiplier: " << rate << "m";
+    ui.addMessage(2.0f, "timeRate", msg.str());
+}
 
 
 int main(int ArgCount, char** Args)
@@ -74,13 +85,7 @@ int main(int ArgCount, char** Args)
             float frameTime = (currTimestamp - prevTimestamp) / float(SDL_GetPerformanceFrequency());
             float fps = 1.0f / frameTime;
             prevTimestamp = currTimestamp;
-            // only update the fps counter every second so it doesn't flicker
-            if (currTimestamp - prevFPSTimestamp > SDL_GetPerformanceFrequency()) {
-                prevFPSTimestamp = currTimestamp;
-                std::ostringstream msgstream;
-                msgstream << std::fixed << std::setprecision(1) << "FPS: " << fps;
-                fpsMsg = msgstream.str();
-            }
+            ui.setFps(fps);
             SDL_GetWindowSize(window, &window_w, &window_h);
             SDL_Event e;
             while (SDL_PollEvent(&e)) {
@@ -97,27 +102,35 @@ int main(int ArgCount, char** Args)
                         break;
                     case SDLK_u:
                         scene.getSun().multiplyRate(0.5f);
+                        addTimeRateMessage(ui, scene.getSun().getRate());
                         break;
                     case SDLK_p:
                         scene.getSun().multiplyRate(2.0f);
+                        addTimeRateMessage(ui, scene.getSun().getRate());
                         break;
                     case SDLK_i:
                         scene.getSun().changeTime(-1.0f);
+                        addTimeRateMessage(ui, scene.getSun().getRate());
                         break;
                     case SDLK_o:
                         scene.getSun().changeTime(1.0f);
+                        addTimeRateMessage(ui, scene.getSun().getRate());
                         break;
                     case SDLK_h:
                         scene.changeFocusDistance(-1.0f);
+                        addFocusDistanceMessage(ui, scene.getFocusDistance());
                         break;
                     case SDLK_j:
                         scene.changeFocusDistance(-0.1f);
+                        addFocusDistanceMessage(ui, scene.getFocusDistance());
                         break;
                     case SDLK_k:
                         scene.changeFocusDistance(0.1f);
+                        addFocusDistanceMessage(ui, scene.getFocusDistance());
                         break;
                     case SDLK_l:
                         scene.changeFocusDistance(1.0f);
+                        addFocusDistanceMessage(ui, scene.getFocusDistance());
                         break;
                     }
                 }
@@ -180,9 +193,8 @@ int main(int ArgCount, char** Args)
             scene.getCamera().m_aspect = aspectRatio;
             scene.setFramebufferSize(framebuffer_w, framebuffer_h);
             scene.tick(frameTime);
+            ui.tick(frameTime);
             ui.setFbSize(framebuffer_w, framebuffer_h);
-            
-            ui.addText(fpsMsg, -1.0f, 1.0f - 32.0f / framebuffer_h, 1.0f);
             
             scene.render();
             ui.draw();

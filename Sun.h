@@ -15,6 +15,7 @@ public:
 	float getTheta() const;
 	float getPhi() const { return m_phi; }
 	float getTime() { return m_time; }
+	float getRate() { return m_rate; }
 	void tick(float t);
 	void multiplyRate(float m);
 	void changeTime(float delta);

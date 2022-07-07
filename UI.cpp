@@ -1,5 +1,7 @@
 #include <vector>
 #include <glm/ext.hpp>
+#include <sstream>
+#include <iomanip>
 
 #include "UI.h"
 #include "Util.h"
@@ -13,7 +15,9 @@ UI::UI(Scene* scene) :
 	m_aspectRatio(1.0f), 
 	m_fbWidth(1), 
 	m_fbHeight(1),
-	m_textDataVboSize(2048)
+	m_textDataVboSize(2048),
+	m_fps(1.0f),
+	m_fpsTimer(1.0f)
 {
 	m_texFont.setMagFilter(GL_NEAREST);
 	m_texFont.setMinFilter(GL_NEAREST);
@@ -90,6 +94,28 @@ void UI::setFbSize(int fbWidth, int fbHeight) {
 	m_fbHeight = fbHeight;
 }
 
+void UI::tick(float dt) {
+	m_fpsTimer += dt;
+	for (auto it = m_messages.begin(); it != m_messages.end();) {
+		TimedMessage& m = it->second;
+		m.timeRemaining -= dt;
+		if (m.timeRemaining < 0.0f) {
+			auto nextIt = it;
+			++nextIt;
+			m_messages.erase(it);
+			it = nextIt;
+		}
+		else {
+			++it;
+		}
+	}
+}
+
+void UI::addMessage(float duration, const std::string& key, const std::string& s) {
+	TimedMessage m{s, duration};
+	m_messages[key] = m;
+}
+
 void UI::draw() {
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_STENCIL_TEST);
@@ -107,7 +133,7 @@ void UI::draw() {
 	glUniform4f(m_prog["colour"], 0.0f, 0.0f, 0.0f, 1.0f);
 	glDrawArrays(GL_LINE_STRIP, 1, 61);
 	glDrawArrays(GL_LINES, m_clockTickOffset, 24);
-	
+
 	float time = m_scene->getDaytime();
 	float shortTheta = time * glm::pi<float>() / 6.0f - glm::pi<float>() / 2.0f;
 	float longTheta = time * glm::pi<float>() * 2.0f - glm::pi<float>() / 2.0f;
@@ -117,6 +143,22 @@ void UI::draw() {
 	rotM = M * glm::mat3(glm::vec3(glm::cos(longTheta), -glm::sin(longTheta), 0), glm::vec3(glm::sin(longTheta), glm::cos(longTheta), 0), glm::vec3(0, 0, 1.0f));
 	glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(rotM));
 	glDrawArrays(GL_LINES, m_clockTickOffset + 26, 2);
+
+	// Update the text data
+	// only update the fps counter every second so it doesn't flicker
+	if (m_fpsTimer > 0.25f) {
+		std::ostringstream msgstream;
+		msgstream << std::fixed << std::setprecision(1) << "FPS: " << m_fps;
+		m_fpsString = msgstream.str();
+		m_fpsTimer = 0;
+	}
+	addText(m_fpsString, -1.0f, 1.0f - 32.0f / m_fbHeight, 1.0f);
+	float messageBot = 0.8f;
+	for (auto& p : m_messages) {
+		TimedMessage& m = p.second;
+		addText(m.txt, -0.5f, messageBot, 1.0f);
+		messageBot -= 16 * (2.0 / m_fbHeight);
+	}
 
 	m_textProg.use();
 	glBindVertexArray(m_textVao);

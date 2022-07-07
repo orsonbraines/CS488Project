@@ -24,6 +24,7 @@ public:
 	Sun& getSun() { return m_sun; }
 	void toggleBinoMode() { m_binoMode = !m_binoMode; }
 	void changeFocusDistance(float delta);
+	float getFocusDistance() { return m_binoFocusDist; }
 	void setFramebufferSize(uint fboW, uint fboH) {
 		m_defaultFboW = fboW;
 		m_defaultFboH = fboH;
