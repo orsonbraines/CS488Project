@@ -32,7 +32,8 @@ Scene::Scene() :
     m_flShadowTextureSize(1024),
     m_sceneWidth(640),
     m_sceneHeight(360),
-    m_reflectionPlane(1.0f)
+    m_reflectionPlane(1.0f),
+    m_binoFocusDist(3.0f)
 {
 	// load textures
 	m_tex123456.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
@@ -142,9 +143,12 @@ Scene::~Scene() {
     glDeleteFramebuffers(2, m_blurFbos);
 }
 
-void Scene::render() {
-    m_sun.tick(0.004f);
+void Scene::tick(float dt) {
+    m_sun.tick(dt);
+    m_smoke.tick(dt);
+}
 
+void Scene::render() {
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_STENCIL_TEST);
     glDisable(GL_CLIP_DISTANCE0);
@@ -193,7 +197,6 @@ void Scene::render() {
     glEnable(GL_CULL_FACE);
     glDepthFunc(GL_LESS);
 
-    m_smoke.tick();
     glDepthMask(GL_FALSE); // smoke should not overwrite the depth buffer
     renderSmoke(m_cam.getP(), m_cam.getV());
     glDepthMask(GL_TRUE);
@@ -315,7 +318,7 @@ void Scene::blur(GLuint srcFbo, const Texture& srcDepthBuffer, const Texture& sr
     glUniform1f(m_blurProg["nearClip"], m_cam.m_nearZ);
     glUniform1f(m_blurProg["farClip"], m_cam.m_farZ);
     glUniform1f(m_blurProg["kBlurry"], 2.0f);
-    glUniform1f(m_blurProg["focusDistance"], 3.0f);
+    glUniform1f(m_blurProg["focusDistance"], m_binoFocusDist);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     glBindVertexArray(0);
     glDisable(GL_SCISSOR_TEST);
@@ -472,4 +475,16 @@ void Scene::setCommonUniforms(const ShaderProgram& p, const glm::mat4& P, const 
 glm::mat4 Scene::getReflectionMatrix() const {
     glm::mat4 reflect = glm::mat4(glm::vec4(1,0,0,0), glm::vec4(0, -1, 0, 0), glm::vec4(0, 0, 1, 0), glm::vec4(0, 0, 0, 1));
     return glm::translate(glm::vec3(0, m_reflectionPlane, 0)) * reflect * glm::translate(glm::vec3(0, -m_reflectionPlane, 0));
+}
+
+void Scene::changeFocusDistance(float delta) {
+    const float minFocusDistance = 0.1f;
+    const float maxFocusDistance = 50.0f;
+    m_binoFocusDist += delta;
+    if (m_binoFocusDist > maxFocusDistance) {
+        m_binoFocusDist = maxFocusDistance;
+    }
+    if (m_binoFocusDist < minFocusDistance) {
+        m_binoFocusDist = minFocusDistance;
+    }
 }

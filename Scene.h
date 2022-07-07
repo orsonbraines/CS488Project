@@ -20,10 +20,16 @@ public:
 	void render();
 	Flashlight& getFlashlight() { return m_flashlight; }
 	float getDaytime() { return m_sun.getTime(); }
+	Camera& getCamera() { return m_cam; }
+	Sun& getSun() { return m_sun; }
+	void toggleBinoMode() { m_binoMode = !m_binoMode; }
+	void changeFocusDistance(float delta);
+	void setFramebufferSize(uint fboW, uint fboH) {
+		m_defaultFboW = fboW;
+		m_defaultFboH = fboH;
+	}
+	void tick(float dt);
 
-	Camera m_cam;
-	bool m_binoMode;
-	uint m_defaultFboW, m_defaultFboH;
 private:
 	void renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow, float alpha);
 	void renderSmoke(const glm::mat4& P, const glm::mat4& V);
@@ -34,6 +40,9 @@ private:
 	void setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
 	glm::mat4 getReflectionMatrix() const; // reflection about xz plane at given y
 
+	bool m_binoMode;
+	uint m_defaultFboW, m_defaultFboH;
+	Camera m_cam;
 	Sun m_sun;
 	Flashlight m_flashlight;
 
@@ -75,4 +84,5 @@ private:
 	const uint m_sunShadowTextureSize, m_flShadowTextureSize;
 	uint m_sceneWidth, m_sceneHeight;
 	const float m_reflectionPlane;
+	float m_binoFocusDist;
 };

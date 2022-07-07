@@ -9,28 +9,23 @@ SmokeSystem::SmokeSystem(uint numParticles) :
 							m_center(0.0f, 0.0f, 0.0f),
 							m_radius(0.25f),
 							m_accT(0.0f),
+							m_vy(1.0f),
 							m_particles(numParticles),
-							m_maxAge(1000),
-							m_tickNum(0),
+							m_maxAge(10.0),
 							m_prog("shaders/smoke.vs", "shaders/smoke.fs"),
 							m_PV(1.0f),
 							m_vboData(numParticles * 4)
 {
-	float r1 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * 0.00001f;
-	float r2 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * 0.00001f;
-	m_acc1 = glm::vec3(r1, 0.0f, r2);
-	r1 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * 0.00001f;
-	r2 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * 0.00001f;
-	m_acc2 = glm::vec3(r1, 0.0f, r2);
+	m_acc1 = getRandAccel();
+	m_acc2 = getRandAccel();
 
 	for (int i = 0; i < m_particles.size(); ++i) {
-		initParticle(m_particles[i]);
-		m_particles[i].age = i % m_maxAge;
+		initParticle(m_particles[i], float(i) * m_maxAge / m_particles.size());
 	}
 
 	// get into a reasonable starting config
-	for (int i = 0; i < m_maxAge; ++i) {
-		tick();
+	for (int i = 0; i < 100; ++i) {
+		tick(float(m_maxAge) / 100);
 	}
 
 	glGenVertexArrays(1, &m_vao);
@@ -104,32 +99,41 @@ SmokeSystem::~SmokeSystem() {
 	glDeleteBuffers(1, &m_dynamicVbo);
 }
 
-void SmokeSystem::tick() {
+glm::vec3 SmokeSystem::getRandAccel() {
+	float mult = 0.1f;
+	float r1 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * mult;
+	float r2 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * mult;
+	return glm::vec3(r1, 0.0f, r2);
+}
+
+void SmokeSystem::tick(float t) {
+	// pick a new wind direction every second
 	if (m_accT >= 1.0f) {
-		float r1 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * 0.00001f;
-		float r2 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * 0.00001f;
 		m_acc1 = m_acc2;
-		m_acc2 = glm::vec3(r1, 0.0f, r2);
+		m_acc2 = getRandAccel();
 		m_accT -= 1.0f;
 	}
 
-	m_accT += 0.01f;
+	m_accT += t;
+	// linear interpolate the 2 wind dircetions
 	glm::vec3 acc = m_acc2 * m_accT + m_acc1 * (1.0f - m_accT);
 
 	for (int i = 0; i < m_particles.size(); ++i) {
 		if (m_particles[i].age > m_maxAge) {
-			initParticle(m_particles[i]);
+			initParticle(m_particles[i], m_particles[i].age - m_maxAge);
 		}
-		m_particles[i].vel += acc;
-		m_particles[i].pos += m_particles[i].vel;
-		++m_particles[i].age;
+		m_particles[i].vel += acc * t;
+		m_particles[i].pos += m_particles[i].vel * t;
+		m_particles[i].age += t;
 	}
 }
 
-void SmokeSystem::initParticle(SmokeParticle& p) {
-	p.age = 0;
+void SmokeSystem::initParticle(SmokeParticle& p, float age) {
+	p.age = age;
 	float theta = float(rand()) / float(RAND_MAX) * 2.0f * glm::pi<float>();
-	p.pos = m_center + glm::vec3(glm::cos(theta) * m_radius, 0, glm::sin(theta) * m_radius);
+	float mag = glm::sqrt(float(rand()) / float(RAND_MAX));
+	p.pos = m_center + glm::vec3(glm::cos(theta) * m_radius * mag, m_vy * age, glm::sin(theta) * m_radius * mag);
 	theta = float(rand()) / float(RAND_MAX) * 2.0f * glm::pi<float>();
-	p.vel = glm::vec3(glm::cos(theta) * 0.001f, 0.01f, glm::sin(theta) * 0.001f);
+	mag = glm::sqrt(float(rand()) / float(RAND_MAX) * 0.01f);
+	p.vel = glm::vec3(glm::cos(theta) * mag, m_vy, glm::sin(theta) * mag);
 }

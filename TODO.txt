@@ -1,11 +1,9 @@
 Next Steps
-/ Use seperate framebuffer for doing reflections
-/ Depth of field
-/ Perlin noise hmap generation
-- 2D UI
-/ Skybox
-- add a couple of models
+- improve UI text and display message for focus dist and time scale
+- add a couple of models / kill the tex cube
 - picking
 - picking sound
 - collision detection
+- improve texture for trees
+- add leaves for trees
 - improve resolution of shadows

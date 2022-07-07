@@ -2,7 +2,7 @@
 
 #include <glm/gtx/transform.hpp>
 
-Sun::Sun() : m_phi(glm::radians(30.0f)), m_time(12.0f) {
+Sun::Sun() : m_phi(glm::radians(30.0f)), m_time(12.0f), m_rate(1.0f) {
 
 }
 
@@ -54,9 +54,32 @@ glm::vec3 Sun::getAmbientColour() const {
 	}
 }
 
+// at rate = 1.0, six hours passes per one minute real time
 void Sun::tick(float t) { 
-	m_time += t;
+	m_time += t / 10.0f * m_rate;
 	if (m_time >= 24.0f) {
+		m_time -= 24.0f;
+	}
+}
+
+void Sun::multiplyRate(float m) {
+	const float maxRate = 16.0f;
+	const float minRate = 1.0 / 16.0f;
+	m_rate *= m;
+	if (m_rate > maxRate) {
+		m_rate = maxRate;
+	}
+	if (m_rate < minRate) {
+		m_rate = minRate;
+	}
+}
+
+void Sun::changeTime(float delta) {
+	m_time += delta;
+	while (m_time < 0.0f) {
+		m_time += 24.0f;
+	}
+	while (m_time >= 24.0f) {
 		m_time -= 24.0f;
 	}
 }

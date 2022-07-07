@@ -16,7 +16,10 @@ public:
 	float getPhi() const { return m_phi; }
 	float getTime() { return m_time; }
 	void tick(float t);
+	void multiplyRate(float m);
+	void changeTime(float delta);
 private:
 	float m_phi;
 	float m_time;
+	float m_rate;
 };

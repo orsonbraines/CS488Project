@@ -109,8 +109,8 @@ void UI::draw() {
 	glDrawArrays(GL_LINES, m_clockTickOffset, 24);
 	
 	float time = m_scene->getDaytime();
-	float shortTheta = time * glm::pi<float>() / 6.0f;
-	float longTheta = time * glm::pi<float>() * 2.0f;
+	float shortTheta = time * glm::pi<float>() / 6.0f - glm::pi<float>() / 2.0f;
+	float longTheta = time * glm::pi<float>() * 2.0f - glm::pi<float>() / 2.0f;
 	glm::mat3 rotM = M * glm::mat3(glm::vec3(glm::cos(shortTheta), -glm::sin(shortTheta), 0), glm::vec3(glm::sin(shortTheta), glm::cos(shortTheta), 0), glm::vec3(0, 0, 1.0f));
 	glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(rotM));
 	glDrawArrays(GL_LINES, m_clockTickOffset + 24, 2);

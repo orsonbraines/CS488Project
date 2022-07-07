@@ -83,22 +83,41 @@ int main(int ArgCount, char** Args)
             }
             SDL_GetWindowSize(window, &window_w, &window_h);
             SDL_Event e;
-            while (SDL_PollEvent(&e))
-            {
-                if (e.type == SDL_KEYDOWN)
-                {
-                    switch (e.key.keysym.sym)
-                    {
+            while (SDL_PollEvent(&e)) {
+                if (e.type == SDL_KEYDOWN) {
+                    switch (e.key.keysym.sym) {
                     case SDLK_ESCAPE:
                         running = false;
                         break;
                     case SDLK_b:
-                        scene.m_binoMode = !scene.m_binoMode;
+                        scene.toggleBinoMode();
                         break;
                     case SDLK_f:
                         scene.getFlashlight().toggle();
                         break;
-                    default:
+                    case SDLK_u:
+                        scene.getSun().multiplyRate(0.5f);
+                        break;
+                    case SDLK_p:
+                        scene.getSun().multiplyRate(2.0f);
+                        break;
+                    case SDLK_i:
+                        scene.getSun().changeTime(-1.0f);
+                        break;
+                    case SDLK_o:
+                        scene.getSun().changeTime(1.0f);
+                        break;
+                    case SDLK_h:
+                        scene.changeFocusDistance(-1.0f);
+                        break;
+                    case SDLK_j:
+                        scene.changeFocusDistance(-0.1f);
+                        break;
+                    case SDLK_k:
+                        scene.changeFocusDistance(0.1f);
+                        break;
+                    case SDLK_l:
+                        scene.changeFocusDistance(1.0f);
                         break;
                     }
                 }
@@ -109,8 +128,8 @@ int main(int ArgCount, char** Args)
                 else if (e.type == SDL_MOUSEMOTION) {
                     float dx = float(e.motion.xrel);
                     float dy = float(e.motion.yrel);
-                    scene.m_cam.m_yaw -= dx / float(window_w) * glm::radians(180.0f);
-                    scene.m_cam.m_pitch -= dy / float(window_h) * glm::radians(90.0f);
+                    scene.getCamera().m_yaw -= dx / float(window_w) * glm::radians(180.0f);
+                    scene.getCamera().m_pitch -= dy / float(window_h) * glm::radians(90.0f);
                 }
             }
 
@@ -118,27 +137,27 @@ int main(int ArgCount, char** Args)
                 int numkeys;
                 const Uint8* keystate = SDL_GetKeyboardState(&numkeys);
                 assert(numkeys > SDL_SCANCODE_W);
-                glm::mat3 dirs(scene.m_cam.getVInv());
+                glm::mat3 dirs(scene.getCamera().getVInv());
                 glm::vec3 forward = -dirs[2];
                 glm::vec3 right = dirs[0];
                 glm::vec3 up = dirs[1];
                 if (keystate[SDL_SCANCODE_W]) {
-                    scene.m_cam.m_pos += 0.03f * forward;
+                    scene.getCamera().m_pos += 0.03f * forward;
                 }
                 if (keystate[SDL_SCANCODE_S]) {
-                    scene.m_cam.m_pos -= 0.03f * forward;
+                    scene.getCamera().m_pos -= 0.03f * forward;
                 }
                 if (keystate[SDL_SCANCODE_A]) {
-                    scene.m_cam.m_pos -= 0.03f * right;
+                    scene.getCamera().m_pos -= 0.03f * right;
                 }
                 if (keystate[SDL_SCANCODE_D]) {
-                    scene.m_cam.m_pos += 0.03f * right;
+                    scene.getCamera().m_pos += 0.03f * right;
                 }
                 if (keystate[SDL_SCANCODE_E]) {
-                    scene.m_cam.m_pos += 0.03f * up;
+                    scene.getCamera().m_pos += 0.03f * up;
                 }
                 if (keystate[SDL_SCANCODE_Q]) {
-                    scene.m_cam.m_pos -= 0.03f * up;
+                    scene.getCamera().m_pos -= 0.03f * up;
                 }
                 if (keystate[SDL_SCANCODE_RIGHT]) {
                     scene.getFlashlight().changeAngle(-0.01f, 0.0f);
@@ -158,9 +177,9 @@ int main(int ArgCount, char** Args)
             SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
             glViewport(0, 0, framebuffer_w, framebuffer_h);
             float aspectRatio = float(framebuffer_w) / float(framebuffer_h);
-            scene.m_cam.m_aspect = aspectRatio;
-            scene.m_defaultFboW = framebuffer_w;
-            scene.m_defaultFboH = framebuffer_h;
+            scene.getCamera().m_aspect = aspectRatio;
+            scene.setFramebufferSize(framebuffer_w, framebuffer_h);
+            scene.tick(frameTime);
             ui.setFbSize(framebuffer_w, framebuffer_h);
             
             ui.addText(fpsMsg, -1.0f, 1.0f - 32.0f / framebuffer_h, 1.0f);
