@@ -1,5 +1,4 @@
 Next Steps
-- improve UI text and display message for focus dist and time scale
 - add a couple of models / kill the tex cube
 - picking
 - picking sound

@@ -10,9 +10,11 @@ public:
 	~Cylinder();
 	uint getNumVertices() const { return m_nVertices; }
 	GLuint getVao() const { return m_vao; }
+	uint getId() const { return m_id; }
 private:
 	GLuint m_vao, m_vbo;
 	uint m_nVertices;
+	uint m_id;
 };
 
 class CylinderInstance {

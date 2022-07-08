@@ -3,13 +3,7 @@
 #include "Cylinder.h"
 
 
-Cylinder::Cylinder() {
-	/*layout(location = 0) in vec3 pos;
-layout(location = 1) in vec3 vs_normal;
-layout(location = 2) in vec2 vs_uv;
-layout(location = 3) in vec3 vs_udir;
-layout(location = 4) in vec3 vs_vdir;*/
-
+Cylinder::Cylinder() : m_id(255) {
 	const int nDivisions = 50;
 	m_nVertices = (nDivisions + 1) * 2;
 	const int floatsPerVertex = 14;

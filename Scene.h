@@ -13,6 +13,12 @@
 #include "Flashlight.h"
 #include "Skybox.h"
 
+enum class RenderType {
+	Normal,
+	Shadow,
+	Pick
+};
+
 class Scene {
 public:
 	Scene();
@@ -30,9 +36,9 @@ public:
 		m_defaultFboH = fboH;
 	}
 	void tick(float dt);
-
+	void pickTarget();
 private:
-	void renderObjects(const glm::mat4& P, const glm::mat4& V, bool isShadow, float alpha);
+	void renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType renderType, float alpha);
 	void renderSmoke(const glm::mat4& P, const glm::mat4& V);
 	void renderGround(const glm::mat4& P, const glm::mat4& V, float alpha);
 	void renderWater(const glm::mat4& P, const glm::mat4& V);
@@ -56,9 +62,10 @@ private:
 		m_blurProg,
 		m_gaussianProg,
 		m_shadowProg,
-		m_waterProg;
+		m_waterProg,
+		m_pickProg;
 
-	Texture m_tex123456,
+	Texture m_texRubiksCube,
 		m_texHeightmap,
 		m_texBmapHeightfield,
 		m_texBino,
@@ -70,8 +77,8 @@ private:
 		m_texSceneDepth;
 	Texture m_texBlurs[2];
 
-	Model m_tree, m_cube;
-	ModelInstance m_tree1, m_cube1;
+	Model m_tree, m_rubiksCube, m_goldRing;
+	ModelInstance m_tree1, m_rubiksCubeInst, m_goldRingInst;
 	GridMesh m_gridMesh;
 	Cylinder m_cylinder;
 	CylinderInstance m_cyl1;

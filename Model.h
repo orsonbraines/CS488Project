@@ -16,11 +16,15 @@ public:
 	bool isTextured() const { return m_isTextured; }
 	uint getNumIndices() const { return m_nIndices; }
 	GLuint getVao() const { return m_vao; }
+	uint getId() const { return m_id; }
 private:
 	GLuint m_vbo, m_ibo, m_vao;
 	uint m_nIndices;
 	std::vector<std::pair<uint, Material>> m_mtls;
 	bool m_isTextured;
+	uint m_id;
+
+	static uint s_prevId;
 };
 
 class ModelInstance {

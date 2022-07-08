@@ -9,6 +9,8 @@
 #include "Model.h"
 #include "Util.h"
 
+uint Model::s_prevId = 0;
+
 static std::map<std::string, Material> loadMaterials(const std::string& mtlFile) {
 	std::map<std::string, Material> mats;
 
@@ -44,7 +46,7 @@ static std::map<std::string, Material> loadMaterials(const std::string& mtlFile)
 	return mats;
 }
 
-Model::Model(const std::string& fileName) : m_isTextured(false) {
+Model::Model(const std::string& fileName) : m_isTextured(false), m_id(++s_prevId) {
 	std::vector<std::array<float, 3>> verts;
 	std::vector<std::array<float, 3>> normals;
 	std::vector<std::array<float, 2>> uvs;

@@ -144,6 +144,11 @@ int main(int ArgCount, char** Args)
                     scene.getCamera().m_yaw -= dx / float(window_w) * glm::radians(180.0f);
                     scene.getCamera().m_pitch -= dy / float(window_h) * glm::radians(90.0f);
                 }
+                else if (e.type == SDL_MOUSEBUTTONUP) {
+                    if (e.button.button == SDL_BUTTON_LEFT) {
+                        scene.pickTarget();
+                    }
+                }
             }
 
             {
