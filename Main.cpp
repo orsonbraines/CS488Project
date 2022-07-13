@@ -12,6 +12,7 @@
 #include "ShaderProgram.h"
 #include "Scene.h"
 #include "UI.h"
+#include "Sound.h"
 
 void addFocusDistanceMessage(UI &ui, float focusDistance) {
     std::ostringstream msg;
@@ -28,7 +29,7 @@ void addTimeRateMessage(UI& ui, float rate) {
 
 int main(int ArgCount, char** Args)
 {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) {
         std::cerr << "Unable to initialize SDL" << std::endl;
         return 1;
     }
@@ -74,8 +75,9 @@ int main(int ArgCount, char** Args)
         glEnable(GL_DEBUG_OUTPUT);
         glDebugMessageCallback(loggingCallback, nullptr);
 
+        AudioDevice audioDevice;
         Scene scene;
-        UI ui(&scene);
+        UI ui(&scene, audioDevice);
 
         bool running = true;
         std::string fpsMsg = "FPS: ????";

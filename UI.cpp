@@ -6,7 +6,7 @@
 #include "UI.h"
 #include "Util.h"
 
-UI::UI(Scene* scene) :
+UI::UI(Scene* scene, AudioDevice &audioDevice) :
 	m_prog("shaders/2dColour.vs", "shaders/2dColour.fs"),
 	m_textProg("shaders/2dTexture.vs", "shaders/2dAlphaTexture.fs"),
 	m_texFont(),
@@ -23,7 +23,11 @@ UI::UI(Scene* scene) :
 	m_foundObjects{false, false},
 	m_showHint(false),
 	m_hintIdx(0),
-	m_hints{"M2 U M2 U2 M2 U M2", "My precious"}
+	m_hints{"M2 U M2 U2 M2 U M2", "My precious"},
+	m_audioDevice(audioDevice),
+	m_failSound("sounds/failSound.wav"),
+	m_passSound("sounds/passSound.wav"),
+	m_timeSinceLastSound(0)
 {
 	m_texFont.setMagFilter(GL_NEAREST);
 	m_texFont.setMinFilter(GL_NEAREST);
@@ -135,11 +139,26 @@ void UI::changeHint(bool dir) {
 }
 
 void UI::pickTarget() {
+	bool success = false;
 	uint id = m_scene->pickTarget();
 	for (uint i = 0; i < m_requiredIds.size(); ++i) {
 		if (id == m_requiredIds[i]) {
-			m_foundObjects[i] = true;
+			if (m_foundObjects[i] == false) {
+				m_foundObjects[i] = true;
+				success = true;
+			}
+			break;
 		}
+	}
+
+	if (m_timeSinceLastSound > 1.0f) {
+		if (success) {
+			m_audioDevice.playSound(m_passSound);
+		}
+		else {
+			m_audioDevice.playSound(m_failSound);
+		}
+		m_timeSinceLastSound = 0.0f;
 	}
 }
 
@@ -151,6 +170,7 @@ void UI::setFbSize(int fbWidth, int fbHeight) {
 
 void UI::tick(float dt) {
 	m_fpsTimer += dt;
+	m_timeSinceLastSound += dt;
 	for (auto it = m_messages.begin(); it != m_messages.end();) {
 		TimedMessage& m = it->second;
 		m.timeRemaining -= dt;

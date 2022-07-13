@@ -8,6 +8,7 @@
 #include "ShaderProgram.h"
 #include "Scene.h"
 #include "Texture.h"
+#include "Sound.h"
 
 struct TimedMessage {
 	std::string txt;
@@ -16,7 +17,7 @@ struct TimedMessage {
 
 class UI {
 public:
-	UI(Scene *scene);
+	UI(Scene *scene, AudioDevice &audioDevice);
 	~UI();
 	void draw();
 	void setFbSize(int fbWidth, int fbHeight);
@@ -59,4 +60,8 @@ private:
 	bool m_showHint;
 	uint m_hintIdx;
 	std::vector<std::string> m_hints;
+
+	AudioDevice& m_audioDevice;
+	Sound m_failSound, m_passSound;
+	float m_timeSinceLastSound;
 };
