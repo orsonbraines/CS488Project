@@ -36,7 +36,7 @@ public:
 		m_defaultFboH = fboH;
 	}
 	void tick(float dt);
-	void pickTarget();
+	uint pickTarget();
 private:
 	void renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType renderType, float alpha);
 	void renderSmoke(const glm::mat4& P, const glm::mat4& V);

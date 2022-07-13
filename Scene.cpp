@@ -155,7 +155,7 @@ void Scene::tick(float dt) {
     m_smoke.tick(dt);
 }
 
-void Scene::pickTarget() {
+uint Scene::pickTarget() {
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_STENCIL_TEST);
     glDisable(GL_CLIP_DISTANCE0);
@@ -176,10 +176,11 @@ void Scene::pickTarget() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     renderObjects(m_cam.getP(), m_cam.getV(), RenderType::Pick, 1.0f);
     glReadBuffer(GL_BACK);
-    int id = 0;
+    uint id = 0;
     glReadPixels(m_defaultFboW / 2, m_defaultFboH / 2, 1, 1, GL_RED, GL_UNSIGNED_BYTE, &id);
 
     DBG(std::cerr << "picked " << id << std::endl);
+    return id;
 }
 
 void Scene::render() {

@@ -99,6 +99,9 @@ int main(int ArgCount, char** Args)
                         break;
                     case SDLK_f:
                         scene.getFlashlight().toggle();
+                        break; 
+                    case SDLK_g:
+                        ui.toggleShowHint();
                         break;
                     case SDLK_u:
                         scene.getSun().multiplyRate(0.5f);
@@ -132,6 +135,16 @@ int main(int ArgCount, char** Args)
                         scene.changeFocusDistance(1.0f);
                         addFocusDistanceMessage(ui, scene.getFocusDistance());
                         break;
+                    case SDLK_LEFT:
+                        if (ui.getShowHint()) {
+                            ui.changeHint(false);
+                        }
+                        break;
+                    case SDLK_RIGHT:
+                        if (ui.getShowHint()) {
+                            ui.changeHint(true);
+                        }
+                        break;
                     }
                 }
                 else if (e.type == SDL_QUIT)
@@ -146,7 +159,13 @@ int main(int ArgCount, char** Args)
                 }
                 else if (e.type == SDL_MOUSEBUTTONUP) {
                     if (e.button.button == SDL_BUTTON_LEFT) {
-                        scene.pickTarget();
+                        ui.pickTarget();
+                        ui.setShowCrosshiars(false);
+                    }
+                }
+                else if (e.type == SDL_MOUSEBUTTONDOWN) {
+                    if (e.button.button == SDL_BUTTON_LEFT) {
+                        ui.setShowCrosshiars(true);
                     }
                 }
             }
@@ -177,17 +196,19 @@ int main(int ArgCount, char** Args)
                 if (keystate[SDL_SCANCODE_Q]) {
                     scene.getCamera().m_pos -= 0.03f * up;
                 }
-                if (keystate[SDL_SCANCODE_RIGHT]) {
-                    scene.getFlashlight().changeAngle(-0.01f, 0.0f);
-                }
-                if (keystate[SDL_SCANCODE_LEFT]) {
-                    scene.getFlashlight().changeAngle(0.01f, 0.0f);
-                }
-                if (keystate[SDL_SCANCODE_UP]) {
-                    scene.getFlashlight().changeAngle(0.0f, 0.01f);
-                }
-                if (keystate[SDL_SCANCODE_DOWN]) {
-                    scene.getFlashlight().changeAngle(0.0f, -0.01f);
+                if (!ui.getShowHint()) {
+                    if (keystate[SDL_SCANCODE_RIGHT]) {
+                        scene.getFlashlight().changeAngle(-0.01f, 0.0f);
+                    }
+                    if (keystate[SDL_SCANCODE_LEFT]) {
+                        scene.getFlashlight().changeAngle(0.01f, 0.0f);
+                    }
+                    if (keystate[SDL_SCANCODE_UP]) {
+                        scene.getFlashlight().changeAngle(0.0f, 0.01f);
+                    }
+                    if (keystate[SDL_SCANCODE_DOWN]) {
+                        scene.getFlashlight().changeAngle(0.0f, -0.01f);
+                    }
                 }
             }
 

@@ -25,6 +25,11 @@ public:
 	void tick(float dt);
 	void setFps(float fps) { m_fps = fps; }
 	void addMessage(float duration, const std::string &key, const std::string& s);
+	void setShowCrosshiars(bool show) { m_showCrosshairs = show; }
+	void toggleShowHint() { m_showHint = !m_showHint; }
+	bool getShowHint() { return m_showHint; }
+	void changeHint(bool dir);
+	void pickTarget();
 private:
 	Texture m_texFont;
 	ShaderProgram m_prog, m_textProg;
@@ -44,4 +49,14 @@ private:
 	float m_fpsTimer;
 	std::string m_fpsString;
 	std::map<std::string, TimedMessage> m_messages;
+
+	bool m_showCrosshairs;
+	int m_crosshairsOffset;
+	int m_checkboxOffset;
+
+	std::vector<uint> m_requiredIds;
+	std::vector<bool> m_foundObjects;
+	bool m_showHint;
+	uint m_hintIdx;
+	std::vector<std::string> m_hints;
 };

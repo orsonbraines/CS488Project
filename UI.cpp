@@ -17,7 +17,13 @@ UI::UI(Scene* scene) :
 	m_fbHeight(1),
 	m_textDataVboSize(2048),
 	m_fps(1.0f),
-	m_fpsTimer(1.0f)
+	m_fpsTimer(1.0f),
+	m_showCrosshairs(false),
+	m_requiredIds{2,3},
+	m_foundObjects{false, false},
+	m_showHint(false),
+	m_hintIdx(0),
+	m_hints{"M2 U M2 U2 M2 U M2", "My precious"}
 {
 	m_texFont.setMagFilter(GL_NEAREST);
 	m_texFont.setMinFilter(GL_NEAREST);
@@ -59,6 +65,37 @@ UI::UI(Scene* scene) :
 	vboData.push_back(clockLongArmLength);
 	vboData.push_back(0.0f);
 
+	m_crosshairsOffset = vboData.size() / 2;
+	//crosshairs
+	vboData.push_back(-0.1f);
+	vboData.push_back(0.0f);
+	vboData.push_back(0.1f);
+	vboData.push_back(0.0f);
+	vboData.push_back(0.0f);
+	vboData.push_back(-0.1f);
+	vboData.push_back(0.0f);
+	vboData.push_back(0.1f);
+
+	m_checkboxOffset = vboData.size() / 2;
+	vboData.push_back(-1.0f);
+	vboData.push_back(-1.0f);
+	vboData.push_back(1.0f);
+	vboData.push_back(-1.0f);
+	vboData.push_back(-1.0f);
+	vboData.push_back(1.0f);
+	vboData.push_back(1.0f);
+	vboData.push_back(1.0f);
+
+	vboData.push_back(-0.9f);
+	vboData.push_back(-0.9f);
+	vboData.push_back(0.9f);
+	vboData.push_back(0.9f);
+	vboData.push_back(-0.9f);
+	vboData.push_back(0.9f);
+	vboData.push_back(0.9f);
+	vboData.push_back(-0.9f);
+
+
 	glBufferData(GL_ARRAY_BUFFER, vboData.size() * sizeof(float), (void*)vboData.data(), GL_STATIC_DRAW);
 
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
@@ -86,6 +123,24 @@ UI::~UI() {
 	glDeleteBuffers(1, &m_vbo);
 	glDeleteVertexArrays(1, &m_textVao);
 	glDeleteBuffers(1, &m_textVao);
+}
+
+void UI::changeHint(bool dir) {
+	if (dir && m_hintIdx + 1 < m_hints.size()) {
+		++m_hintIdx;
+	}
+	else if(!dir && m_hintIdx > 0) {
+		--m_hintIdx;
+	}
+}
+
+void UI::pickTarget() {
+	uint id = m_scene->pickTarget();
+	for (uint i = 0; i < m_requiredIds.size(); ++i) {
+		if (id == m_requiredIds[i]) {
+			m_foundObjects[i] = true;
+		}
+	}
 }
 
 void UI::setFbSize(int fbWidth, int fbHeight) { 
@@ -144,6 +199,40 @@ void UI::draw() {
 	glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(rotM));
 	glDrawArrays(GL_LINES, m_clockTickOffset + 26, 2);
 
+	if (m_showCrosshairs) {
+		M = glm::mat3(glm::vec3(1.0f / m_aspectRatio, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
+		glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(M));
+		glDrawArrays(GL_LINES, m_crosshairsOffset, 4);
+	}
+
+	for (uint i = 0; i < m_requiredIds.size(); ++i) {
+		glUniform4f(m_prog["colour"], 0.0f, 0.0f, 0.0f, 1.0f);
+		M = glm::mat3(glm::vec3(0.06f / m_aspectRatio, 0, 0), glm::vec3(0, 0.06f, 0), glm::vec3(-0.6f + 0.08f * i, -0.9f, 1));
+		glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(M));
+		glDrawArrays(GL_TRIANGLE_STRIP, m_checkboxOffset, 4);
+		glUniform4f(m_prog["colour"], 1.0f, 1.0f, 1.0f, 1.0f);
+		M = glm::mat3(glm::vec3(0.05f / m_aspectRatio, 0, 0), glm::vec3(0, 0.05f, 0), glm::vec3(-0.6f + 0.08f * i, -0.9f, 1));
+		glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(M));
+		glDrawArrays(GL_TRIANGLE_STRIP, m_checkboxOffset, 4);
+		if (m_foundObjects[i]) {
+			glUniform4f(m_prog["colour"], 0.0f, 0.6f, 0.0f, 1.0f);
+			glLineWidth(6.0f);
+			glDrawArrays(GL_LINES, m_checkboxOffset + 4, 4);
+		}
+	}
+
+	if (m_showHint) {
+		glUniform4f(m_prog["colour"], 0.0f, 0.0f, 0.0f, 1.0f);
+		M = glm::mat3(glm::vec3(0.5f, 0, 0), glm::vec3(0, 0.5f, 0), glm::vec3(0, 0, 1));
+		glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(M));
+		glDrawArrays(GL_TRIANGLE_STRIP, m_checkboxOffset, 4);
+		glUniform4f(m_prog["colour"], 1.0f, 1.0f, 1.0f, 1.0f);
+		M = glm::mat3(glm::vec3(0.5f - 4 * pixelSizeX, 0, 0), glm::vec3(0, 0.5f - 4 * pixelSizeY, 0), glm::vec3(0, 0, 1));
+		glUniformMatrix3fv(m_prog["M"], 1, GL_FALSE, glm::value_ptr(M));
+		glDrawArrays(GL_TRIANGLE_STRIP, m_checkboxOffset, 4);
+		addText(m_hints[m_hintIdx], -0.48f, 0.5f - 22 * pixelSizeY, 1.0f);
+	}
+
 	// Update the text data
 	// only update the fps counter every second so it doesn't flicker
 	if (m_fpsTimer > 0.25f) {
@@ -180,7 +269,7 @@ void UI::draw() {
 void UI::addText(const std::string& txt, float left, float bot, float scale) {
 	float pixelSizeX = 2.0f / float(m_fbWidth);
 	float pixelSizeY = 2.0f / float(m_fbHeight);
-	float charWidthPix = 10.0f;
+	float charWidthPix = 11.0f;
 	float charWidthU = charWidthPix / 512.0f;
 	float charTopV = 4.0f / 256.0f;
 	float charBotV = 20.0f / 256.0f;
@@ -190,33 +279,33 @@ void UI::addText(const std::string& txt, float left, float bot, float scale) {
 		// 1st triangle
 		m_textData.push_back(left);
 		m_textData.push_back(bot);
-		m_textData.push_back((c & 0xf) / 16.0f);
+		m_textData.push_back((c & 0xf) / 16.0f - 0.5f / 512.0f);
 		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charBotV);
 
 		m_textData.push_back(left + charWidthPix * pixelSizeX * scale);
 		m_textData.push_back(bot);
-		m_textData.push_back((c & 0xf) / 16.0f + charWidthU);
+		m_textData.push_back((c & 0xf) / 16.0f + charWidthU - 0.5f / 512.0f);
 		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charBotV);
 
 		m_textData.push_back(left);
 		m_textData.push_back(bot + charHeightPix * pixelSizeY * scale);
-		m_textData.push_back((c & 0xf) / 16.0f);
+		m_textData.push_back((c & 0xf) / 16.0f - 0.5f / 512.0f);
 		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charTopV);
 
 		// second triangle
 		m_textData.push_back(left);
 		m_textData.push_back(bot + charHeightPix * pixelSizeY * scale);
-		m_textData.push_back((c & 0xf) / 16.0f);
+		m_textData.push_back((c & 0xf) / 16.0f - 0.5f / 512.0f);
 		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charTopV);
 
 		m_textData.push_back(left + charWidthPix * pixelSizeX * scale);
 		m_textData.push_back(bot);
-		m_textData.push_back((c & 0xf) / 16.0f + charWidthU);
+		m_textData.push_back((c & 0xf) / 16.0f + charWidthU - 0.5f / 512.0f);
 		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charBotV);
 
 		m_textData.push_back(left + charWidthPix * pixelSizeX * scale);
 		m_textData.push_back(bot + charHeightPix * pixelSizeY * scale);
-		m_textData.push_back((c & 0xf) / 16.0f + charWidthU);
+		m_textData.push_back((c & 0xf) / 16.0f + charWidthU - 0.5f / 512.0f);
 		m_textData.push_back(1.0f - (c >> 4) / 8.0f - charTopV);
 
 		left += charWidthPix * pixelSizeX * scale;
