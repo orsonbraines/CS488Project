@@ -36,7 +36,10 @@ Scene::Scene() :
     m_sceneWidth(640),
     m_sceneHeight(360),
     m_reflectionPlane(1.0f),
-    m_binoFocusDist(3.0f)
+    m_binoFocusDist(3.0f),
+    m_skybox(),
+    m_daySkybox(&m_skybox, "textures/skybox"),
+    m_nightSkybox(&m_skybox, "textures/night")
 {
 	// load textures
 	m_texRubiksCube.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
@@ -225,7 +228,12 @@ void Scene::render() {
 
     glDepthFunc(GL_LEQUAL);
     glDisable(GL_CULL_FACE);
-    m_skybox.draw(m_cam.getP() * glm::mat4(glm::mat3(m_cam.getV())));
+    if (m_sun.isNight()) {
+        m_nightSkybox.draw(m_cam.getP() * glm::mat4(glm::mat3(m_cam.getV())), 1.0f);
+    }
+    else {
+        m_daySkybox.draw(m_cam.getP() * glm::mat4(glm::mat3(m_cam.getV())), m_sun.getBrightness());
+    }
     glEnable(GL_CULL_FACE);
     glDepthFunc(GL_LESS);
 

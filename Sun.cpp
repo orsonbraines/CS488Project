@@ -54,6 +54,30 @@ glm::vec3 Sun::getAmbientColour() const {
 	}
 }
 
+float Sun::getBrightness() const {
+	if (m_time <= 6.0f) {
+		return 0.0f;
+	}
+	else if (m_time <= 8.0f) {
+		float t = (m_time - 6.0f) / (8.0f - 6.0f);
+		return t;
+	}
+	else if (m_time <= 16.0f) {
+		return 1.0f;
+	}
+	else if (m_time <= 18.0f) {
+		float t = (m_time - 16.0f) / (18.0f - 16.0f);
+		return 1 - t;
+	}
+	else {
+		return 0.0f;
+	}
+}
+
+bool Sun::isNight() const {
+	return m_time <= 6.0f || m_time >= 18.0f;
+}
+
 // at rate = 1.0, six hours passes per one minute real time
 void Sun::tick(float t) { 
 	m_time += t / 10.0f * m_rate;

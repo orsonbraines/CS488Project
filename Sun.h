@@ -19,6 +19,8 @@ public:
 	void tick(float t);
 	void multiplyRate(float m);
 	void changeTime(float delta);
+	bool isNight() const;
+	float getBrightness() const;
 private:
 	float m_phi;
 	float m_time;

@@ -40,13 +40,6 @@ Skybox::Skybox() : m_prog("shaders/skybox.vs", "shaders/skybox.fs") {
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-	m_tex.loadDDS("textures/skyboxPX.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_X);
-	m_tex.loadDDS("textures/skyboxNX.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
-	m_tex.loadDDS("textures/skyboxPY.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
-	m_tex.loadDDS("textures/skyboxNY.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
-	m_tex.loadDDS("textures/skyboxPZ.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
-	m_tex.loadDDS("textures/skyboxNZ.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
 }
 
 Skybox::~Skybox() {
@@ -55,13 +48,23 @@ Skybox::~Skybox() {
 	glDeleteBuffers(1, &m_ibo);
 }
 
-void Skybox::draw(const glm::mat4& PV) {
-	m_prog.use();
-	glUniformMatrix4fv(m_prog["PV"], 1, GL_FALSE, glm::value_ptr(PV));
+SkyboxInstance::SkyboxInstance(Skybox* skybox, const std::string& filePrefix) : m_skybox(skybox) {
+	m_tex.loadDDS(filePrefix + "PX.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_X);
+	m_tex.loadDDS(filePrefix + "NX.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_X);
+	m_tex.loadDDS(filePrefix + "PY.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_Y);
+	m_tex.loadDDS(filePrefix + "NY.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_Y);
+	m_tex.loadDDS(filePrefix + "PZ.dds", GL_TEXTURE_CUBE_MAP_POSITIVE_Z);
+	m_tex.loadDDS(filePrefix + "NZ.dds", GL_TEXTURE_CUBE_MAP_NEGATIVE_Z);
+}
+
+void SkyboxInstance::draw(const glm::mat4& PV, float brightness) {
+	m_skybox->m_prog.use();
+	glUniformMatrix4fv(m_skybox->m_prog["PV"], 1, GL_FALSE, glm::value_ptr(PV));
+	glUniform1f(m_skybox->m_prog["brightness"], brightness);
 	glActiveTexture(GL_TEXTURE0);
 	m_tex.bind();
-	glUniform1i(m_prog["skybox"], 0);
-	glBindVertexArray(m_vao);
+	glUniform1i(m_skybox->m_prog["skybox"], 0);
+	glBindVertexArray(m_skybox->m_vao);
 	glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, (void*)0);
 	glBindVertexArray(0);
 }

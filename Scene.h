@@ -86,6 +86,7 @@ private:
 	TreeInstance m_tree2;
 	SmokeSystem m_smoke;
 	Skybox m_skybox;
+	SkyboxInstance m_daySkybox, m_nightSkybox;
 
 	GLuint m_alphatVao, m_alphatVbo;
 
