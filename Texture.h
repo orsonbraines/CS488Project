@@ -15,7 +15,7 @@ public:
 	void setWrapS(GLint wrapS);
 	void setWrapT(GLint wrapT);
 	void setBorderColour(float r, float g, float b, float a);
-	void loadBMP(const std::string& texFilePath);
+	void loadBMP(const std::string& texFilePath, bool genMipmap = false);
 	void loadDDS(const std::string& texFilePath);
 	void loadRaw(const std::string& texFilePath, GLenum internalFormat, GLenum format, GLenum type, uint width, uint height, bool genMips);
 	GLuint getId() const { return m_texId; }

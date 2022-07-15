@@ -12,6 +12,7 @@
 #include "Sun.h"
 #include "Flashlight.h"
 #include "Skybox.h"
+#include "Tree.h"
 
 enum class RenderType {
 	Normal,
@@ -37,14 +38,15 @@ public:
 	}
 	void tick(float dt);
 	uint pickTarget();
+	void setMatrixUniforms(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
+	void setPVM(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
 private:
 	void renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType renderType, float alpha);
 	void renderSmoke(const glm::mat4& P, const glm::mat4& V);
 	void renderGround(const glm::mat4& P, const glm::mat4& V, float alpha);
 	void renderWater(const glm::mat4& P, const glm::mat4& V);
 	void blur(GLuint srcFbo, const Texture &srcDepthBuffer, const Texture &srcColourBuffer, GLuint dstFbo); // srcFbo and dst Fbo must be distinct
-	void setCommonUniforms(const ShaderProgram &p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
-	void setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
+	void setCommonUniforms(const ShaderProgram& p);
 	glm::mat4 getReflectionMatrix() const; // reflection about xz plane at given y
 
 	bool m_binoMode;
@@ -81,7 +83,7 @@ private:
 	ModelInstance m_tree1, m_rubiksCubeInst, m_goldRingInst;
 	GridMesh m_gridMesh;
 	Cylinder m_cylinder;
-	CylinderInstance m_cyl1;
+	TreeInstance m_tree2;
 	SmokeSystem m_smoke;
 	Skybox m_skybox;
 

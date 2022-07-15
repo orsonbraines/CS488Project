@@ -25,7 +25,7 @@ Scene::Scene() :
     m_goldRing("models/goldring.obj"),
     m_goldRingInst(&m_goldRing),
 	m_cylinder(),
-	m_cyl1(&m_cylinder),
+	m_tree2(this, &m_cylinder, glm::vec3(-5,1,3)),
 	m_gridMesh(128,128),
 	m_smoke(15000),
     m_binoMode(false),
@@ -44,7 +44,8 @@ Scene::Scene() :
     m_texHeightmap.loadBMP("textures/noise.bmp");
 	m_texBmapHeightfield.setWrapS(GL_MIRRORED_REPEAT);
 	m_texBmapHeightfield.setWrapT(GL_MIRRORED_REPEAT);
-	m_texBmapHeightfield.loadBMP("textures/heightfield.bmp");
+    m_texBmapHeightfield.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
+	m_texBmapHeightfield.loadBMP("textures/treetexture.bmp", true);
 	m_texBino.loadBMP("textures/binoculars.bmp");
 
 	// Set the model instance transforms
@@ -56,9 +57,6 @@ Scene::Scene() :
     m_goldRingInst.transform(glm::rotate(glm::radians(-20.0f), glm::vec3(0, 0, 1)));
     m_goldRingInst.transform(glm::rotate(glm::radians(5.0f), glm::vec3(1, 0, 0)));
     m_goldRingInst.transform(glm::translate(glm::vec3(2.5f, 0.62f, 1.5f)));
-	m_cyl1.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)));
-	m_cyl1.transform(glm::scale(glm::vec3(0.3f, 4.0f, 0.3f)));
-	m_cyl1.transform(glm::translate(glm::vec3(3.0f, 0.0f, 1.0f)));
 
 	// I don't have a mesh/geometry class for this alpha texture yet
 	// alphat mesh
@@ -361,13 +359,13 @@ void Scene::blur(GLuint srcFbo, const Texture& srcDepthBuffer, const Texture& sr
 void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType renderType, float alpha) {
     if (renderType == RenderType::Shadow) {
         m_shadowProg.use();
-        setShadowPVM(P, V, m_rubiksCubeInst.getM());
+        setPVM(m_shadowProg, P, V, m_rubiksCubeInst.getM());
         m_rubiksCubeInst.setUniformLocations(-1, -1, -1);
     }
     else if (renderType == RenderType::Pick) {
         m_pickProg.use();
         m_rubiksCubeInst.setUniformLocations(-1, -1, -1);
-        glUniformMatrix4fv(m_pickProg["PVM"], 1, GL_FALSE, glm::value_ptr(P * V * m_rubiksCubeInst.getM()));
+        setPVM(m_pickProg, P, V, m_rubiksCubeInst.getM());
         glUniform1i(m_pickProg["id"], m_rubiksCube.getId());
     }
     else {
@@ -382,27 +380,28 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
         m_texFlShadowMap.bind();
         glUniform1i(m_textureKdProg["flShadow"], 2);
         glUniform1f(m_textureKdProg["u_alpha"], alpha);
-        setCommonUniforms(m_textureKdProg, P, V, m_rubiksCubeInst.getM());
+        setCommonUniforms(m_textureKdProg);
+        setMatrixUniforms(m_textureKdProg, P, V, m_rubiksCubeInst.getM());
         m_rubiksCubeInst.setUniformLocations(-1, m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
     }
     m_rubiksCubeInst.draw();
 
     if (renderType == RenderType::Shadow) {
-        setShadowPVM(P, V, m_tree1.getM());
+        setPVM(m_shadowProg, P, V, m_tree1.getM());
         m_tree1.setUniformLocations(-1, -1, -1);
         m_tree1.draw();
-        setShadowPVM(P, V, m_goldRingInst.getM());
+        setPVM(m_shadowProg, P, V, m_goldRingInst.getM());
         m_goldRingInst.setUniformLocations(-1, -1, -1);
         m_goldRingInst.draw();
     }
     else if (renderType == RenderType::Pick) {
         m_tree1.setUniformLocations(-1, -1, -1);
-        glUniformMatrix4fv(m_pickProg["PVM"], 1, GL_FALSE, glm::value_ptr(P * V * m_tree1.getM()));
+        setPVM(m_pickProg, P, V, m_tree1.getM());
         glUniform1i(m_pickProg["id"], m_tree.getId());
         m_tree1.draw();
 
         m_goldRingInst.setUniformLocations(-1, -1, -1);
-        glUniformMatrix4fv(m_pickProg["PVM"], 1, GL_FALSE, glm::value_ptr(P * V * m_goldRingInst.getM()));
+        setPVM(m_pickProg, P, V, m_goldRingInst.getM());
         glUniform1i(m_pickProg["id"], m_goldRing.getId());
         m_goldRingInst.draw();
     }
@@ -414,29 +413,31 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
         glActiveTexture(GL_TEXTURE1);
         m_texFlShadowMap.bind();
         glUniform1i(m_constantKdProg["flShadow"], 1);
-        setCommonUniforms(m_constantKdProg, P, V, m_tree1.getM());
+        setCommonUniforms(m_constantKdProg);
+        setMatrixUniforms(m_constantKdProg, P, V, m_tree1.getM());
         glUniform1f(m_constantKdProg["u_alpha"], alpha);
         m_tree1.setUniformLocations(m_constantKdProg["Kd"], m_constantKdProg["Ks"], m_constantKdProg["Ns"]);
         m_tree1.draw();
-        setCommonUniforms(m_constantKdProg, P, V, m_goldRingInst.getM());
+        setCommonUniforms(m_constantKdProg);
+        setMatrixUniforms(m_constantKdProg, P, V, m_goldRingInst.getM());
         m_goldRingInst.setUniformLocations(m_constantKdProg["Kd"], m_constantKdProg["Ks"], m_constantKdProg["Ns"]);
         m_goldRingInst.draw();
     }
 
     if (renderType == RenderType::Shadow) {
-        setShadowPVM(P, V, m_cyl1.getM());
+        m_tree2.setUniformLocations(-1, -1, -1);
+        m_tree2.draw(m_shadowProg, P, V, true);
     }
     else if (renderType == RenderType::Pick) {
-        glUniformMatrix4fv(m_pickProg["PVM"], 1, GL_FALSE, glm::value_ptr(P * V * m_cyl1.getM()));
         glUniform1i(m_pickProg["id"], m_cylinder.getId());
+        m_tree2.setUniformLocations(-1, -1, -1);
+        m_tree2.draw(m_pickProg, P, V, true);
     }
     else {
         m_bumpmapProg.use();
-        glUniform3f(m_bumpmapProg["Ks"], 0, 0, 0);
-        glUniform1f(m_bumpmapProg["Ns"], 0);
-        glUniform3f(m_bumpmapProg["Kd"], 0.329826f, 0.060918f, 0.008916f);
         glUniform1f(m_bumpmapProg["u_alpha"], alpha);
-        setCommonUniforms(m_bumpmapProg, P, V, m_cyl1.getM());
+        m_tree2.setUniformLocations(m_bumpmapProg["Kd"], m_bumpmapProg["Ks"], m_bumpmapProg["Ns"]);
+        setCommonUniforms(m_bumpmapProg);
         glActiveTexture(GL_TEXTURE0);
         m_texSunShadowMap.bind();
         glUniform1i(m_bumpmapProg["sunShadow"], 0);
@@ -446,8 +447,8 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
         glActiveTexture(GL_TEXTURE2);
         m_texBmapHeightfield.bind();
         glUniform1i(m_bumpmapProg["heightfield"], 2);
+        m_tree2.draw(m_bumpmapProg, P, V, false);
     }
-    m_cyl1.draw();
 }
 
 void Scene::renderSmoke(const glm::mat4& P, const glm::mat4& V) {
@@ -472,7 +473,8 @@ void Scene::renderGround(const glm::mat4& P, const glm::mat4& V, float alpha) {
     m_texHeightmap.bind();
     glUniform1i(m_hmapProg["sampler"], 2);
     glUniform1f(m_hmapProg["u_alpha"], alpha);
-    setCommonUniforms(m_hmapProg, P, V, meshM);
+    setCommonUniforms(m_hmapProg);
+    setMatrixUniforms(m_hmapProg, P, V, meshM);
     glUniform3f(m_hmapProg["Ks"], 0, 0, 0);
     glUniform1f(m_hmapProg["Ns"], 0);
     glUniform3f(m_hmapProg["Kd"], 0.1f, 0.4f, 0.1f);
@@ -495,7 +497,8 @@ void Scene::renderWater(const glm::mat4& P, const glm::mat4& V) {
     m_texHeightmap.bind();
     glUniform1i(m_waterProg["sampler"], 2);
 
-    setCommonUniforms(m_waterProg, P, V, meshM);
+    setCommonUniforms(m_waterProg);
+    setMatrixUniforms(m_waterProg, P, V, meshM);
     glUniform3f(m_waterProg["Ks"], 1.0f, 1.0f, 1.0f);
     glUniform1f(m_waterProg["Ns"], 50.0f);
     glUniform3f(m_waterProg["Kd"], 0.1f, 0.1f, 0.9f);
@@ -506,22 +509,12 @@ void Scene::renderWater(const glm::mat4& P, const glm::mat4& V) {
 
 }
 
-void Scene::setShadowPVM(const glm::mat4& P, const glm::mat4& V, const glm::mat4& M) {
-    glUniformMatrix4fv(m_shadowProg["PVM"], 1, GL_FALSE, glm::value_ptr(P * V * M));
+void Scene::setPVM(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M) {
+    glUniformMatrix4fv(p["PVM"], 1, GL_FALSE, glm::value_ptr(P * V * M));
 }
 
-void Scene::setCommonUniforms(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M) {
+void Scene::setCommonUniforms(const ShaderProgram& p) {
     glm::vec3 sunDir = m_sun.getLightDir();
-    glm::mat4 PV = P * V;
-    glm::mat4 sunPV = m_sun.getP() * m_sun.getV(m_cam.m_pos);
-    glm::mat4 flPV = m_flashlight.getP() * m_flashlight.getV();
-    glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(M)));
-    glm::mat4 pvm = PV * M;
-    glUniformMatrix4fv(p["camPVM"], 1, false, glm::value_ptr(pvm));
-    glUniformMatrix4fv(p["sunPVM"], 1, false, glm::value_ptr(sunPV * M));
-    glUniformMatrix4fv(p["flPVM"], 1, false, glm::value_ptr(flPV * M));
-    glUniformMatrix4fv(p["M"], 1, false, glm::value_ptr(M));
-    glUniformMatrix3fv(p["normalMatrix"], 1, false, glm::value_ptr(normMat));
     glUniform3fv(p["sunlightDir"], 1, glm::value_ptr(sunDir));
     glUniform3fv(p["ambientColour"], 1, glm::value_ptr(m_sun.getAmbientColour()));
     glUniform3fv(p["sunlightColour"], 1, glm::value_ptr(m_sun.getColour()));
@@ -532,6 +525,19 @@ void Scene::setCommonUniforms(const ShaderProgram& p, const glm::mat4& P, const 
     glUniform1f(p["flSoftCutoff"], m_flashlight.getSoftCutoff());
     glUniform1f(p["flHardCutoff"], m_flashlight.getHardCutoff());
     glUniform1f(p["plane"], m_reflectionPlane);
+}
+
+void Scene::setMatrixUniforms(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M) {
+    glm::mat4 PV = P * V;
+    glm::mat4 sunPV = m_sun.getP() * m_sun.getV(m_cam.m_pos);
+    glm::mat4 flPV = m_flashlight.getP() * m_flashlight.getV();
+    glm::mat3 normMat = glm::mat3(glm::transpose(glm::inverse(M)));
+    glm::mat4 pvm = PV * M;
+    glUniformMatrix4fv(p["camPVM"], 1, false, glm::value_ptr(pvm));
+    glUniformMatrix4fv(p["sunPVM"], 1, false, glm::value_ptr(sunPV * M));
+    glUniformMatrix4fv(p["flPVM"], 1, false, glm::value_ptr(flPV * M));
+    glUniformMatrix4fv(p["M"], 1, false, glm::value_ptr(M));
+    glUniformMatrix3fv(p["normalMatrix"], 1, false, glm::value_ptr(normMat));
 }
 
 glm::mat4 Scene::getReflectionMatrix() const {

@@ -122,7 +122,7 @@ void Texture::setBorderColour(float r, float g, float b, float a) {
 	glTextureParameterfv(m_texId, GL_TEXTURE_BORDER_COLOR, bc);
 }
 
-void Texture::loadBMP(const std::string& texFilePath) {
+void Texture::loadBMP(const std::string& texFilePath, bool genMipmap) {
 	std::ifstream in(texFilePath, std::ios_base::binary);
 	if (!in) {
 		throw GraphicsException("Unable to open: " + texFilePath);
@@ -164,6 +164,9 @@ void Texture::loadBMP(const std::string& texFilePath) {
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, buf + pixelOffset);
+	if (genMipmap) {
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
 
 	delete[] buf;
 	glBindTexture(GL_TEXTURE_2D, 0);
