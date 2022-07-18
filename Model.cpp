@@ -170,6 +170,13 @@ Model::~Model() {
 	glDeleteBuffers(1, &m_ibo);
 }
 
+ModelInstance::ModelInstance() :
+	m_KdUniformLoc(-1),
+	m_KsUniformLoc(-1),
+	m_NsUniformLoc(-1),
+	m_model(nullptr),
+	m_M(1.0f) {}
+
 ModelInstance::ModelInstance(Model* model) : 
 	m_KdUniformLoc(-1), 
 	m_KsUniformLoc(-1), 

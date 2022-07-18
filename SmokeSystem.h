@@ -15,7 +15,7 @@ struct SmokeParticle {
 
 class SmokeSystem {
 public:
-	SmokeSystem(uint numParticles);
+	SmokeSystem(uint numParticles, const glm::vec3 &center);
 	~SmokeSystem();
 	void tick(float t);
 	void initParticle(SmokeParticle &p, float age);

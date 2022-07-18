@@ -4,6 +4,8 @@
 #include "Tree.h"
 #include "Scene.h"
 
+TreeInstance::TreeInstance() : m_scene(nullptr), m_KdUniformLoc(-1), m_KsUniformLoc(-1), m_NsUniformLoc(-1) {}
+
 TreeInstance::TreeInstance(Scene *scene, Cylinder* cyl, const glm::vec3& pos) : m_scene(scene), m_KdUniformLoc(-1), m_KsUniformLoc(-1), m_NsUniformLoc(-1) {
 	CylinderInstance trunk(cyl);
 	trunk.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)));

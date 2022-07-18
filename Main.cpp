@@ -33,10 +33,10 @@ int main(int ArgCount, char** Args)
         std::cerr << "Unable to initialize SDL" << std::endl;
         return 1;
     }
-    int framebuffer_w = 640;
-    int framebuffer_h = 360;
-    int window_w = 640;
-    int window_h = 360;
+    int framebuffer_w = 960;
+    int framebuffer_h = 540;
+    int window_w = 960;
+    int window_h = 540;
     unsigned WindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);

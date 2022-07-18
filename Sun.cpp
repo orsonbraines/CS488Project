@@ -33,7 +33,7 @@ glm::vec3 Sun::getColour() const {
 }
 
 glm::vec3 Sun::getAmbientColour() const {
-	glm::vec3 dark(0.07f, 0.07f, 0.07f);
+	glm::vec3 dark(0.12f, 0.12f, 0.12f);
 	glm::vec3 light(0.4f, 0.4f, 0.4f);
 	if (m_time <= 6.0f) {
 		return dark;

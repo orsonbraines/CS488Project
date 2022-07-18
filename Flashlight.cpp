@@ -19,7 +19,7 @@ glm::mat4 Flashlight::getV() const {
 }
 
 glm::mat4 Flashlight::getP() const {
-    return glm::perspective(getHardCutoff(), 1.0f, 0.5f, 15.0f);
+    return glm::perspective(glm::radians(60.0f), 1.0f, 0.5f, 15.0f);
 }
 
 glm::vec3 Flashlight::getColour() const {

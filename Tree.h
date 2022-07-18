@@ -11,6 +11,7 @@ class Scene;
 
 class TreeInstance {
 public:
+	TreeInstance();
 	TreeInstance(Scene *scene, Cylinder *cyl, const glm::vec3 &pos);
 	void draw(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, bool shadow) const;
 	void setUniformLocations(GLint KdUniformLoc, GLint KsUniformLoc, GLint NsUniformLoc);

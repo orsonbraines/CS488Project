@@ -29,12 +29,14 @@ private:
 
 class ModelInstance {
 public:
+	ModelInstance();
 	ModelInstance(Model* model);
 	void draw() const;
 	void setUniformLocations(GLint KdUniformLoc, GLint KsUniformLoc, GLint NsUniformLoc);
-	const glm::mat4& getM() { return m_M; }
+	const glm::mat4& getM() const { return m_M; }
 	void setM(const glm::mat4& M) { m_M = M; }
 	void transform(const glm::mat4& T) { m_M = T * m_M; }
+	uint getId() const { return m_model->getId(); }
 private:
 	GLint m_KdUniformLoc, m_KsUniformLoc, m_NsUniformLoc;
 	Model* m_model;

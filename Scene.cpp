@@ -18,23 +18,20 @@ Scene::Scene() :
     m_gaussianProg("shaders/2dTexture.vs", "shaders/gaussianBlur.fs"),
     m_shadowProg("shaders/shadow.vs", "shaders/shadow.fs"),
     m_pickProg("shaders/shadow.vs", "shaders/pick.fs"),
-	m_tree("models/simpletree.obj"),
-	m_tree1(&m_tree),
+	m_rock("models/rock.obj"),
 	m_rubiksCube("models/rubikscube.obj"),
-    m_rubiksCubeInst(&m_rubiksCube),
     m_goldRing("models/goldring.obj"),
-    m_goldRingInst(&m_goldRing),
+    m_house("models/house.obj"),
 	m_cylinder(),
-	m_tree2(this, &m_cylinder, glm::vec3(-5,1,3)),
 	m_gridMesh(128,128),
-	m_smoke(15000),
+	m_smoke(15000, glm::vec3(15.0f, 9.0f, 17.0f)),
     m_binoMode(false),
     m_defaultFboW(0),
     m_defaultFboH(0),
     m_sunShadowTextureSize(2048),
     m_flShadowTextureSize(1024),
-    m_sceneWidth(640),
-    m_sceneHeight(360),
+    m_sceneWidth(960),
+    m_sceneHeight(540),
     m_reflectionPlane(1.0f),
     m_binoFocusDist(3.0f),
     m_skybox(),
@@ -52,14 +49,48 @@ Scene::Scene() :
 	m_texBino.loadBMP("textures/binoculars.bmp");
 
 	// Set the model instance transforms
-	m_tree1.transform(glm::scale(glm::vec3(0.5f, 1.0f, 0.5f)));
-	m_tree1.transform(glm::translate(glm::vec3(2.0f, 0.0f, -2.0f)));
-    m_rubiksCubeInst.transform(glm::scale(glm::vec3(0.1f, 0.1f, 0.1f)));
-    m_rubiksCubeInst.transform(glm::translate(glm::vec3(-1.0f, 2.45f, -1.0f)));
-    m_goldRingInst.transform(glm::scale(glm::vec3(0.15f, 0.15f, 0.15f)));
-    m_goldRingInst.transform(glm::rotate(glm::radians(-20.0f), glm::vec3(0, 0, 1)));
-    m_goldRingInst.transform(glm::rotate(glm::radians(5.0f), glm::vec3(1, 0, 0)));
-    m_goldRingInst.transform(glm::translate(glm::vec3(2.5f, 0.62f, 1.5f)));
+    for (int i = 0; i < 3; ++i) {
+        ModelInstance rockInst(&m_rock);
+        rockInst.transform(glm::scale(glm::vec3(0.5f, 0.5f, 0.5f)));
+        if (i == 0) {
+            rockInst.transform(glm::translate(glm::vec3(2.0f, 0.8f, -2.0f)));
+        }
+        else if (i == 1) {
+            rockInst.transform(glm::translate(glm::vec3(14.0f, 2.5f, 1.0f)));
+        }
+        else {
+            rockInst.transform(glm::translate(glm::vec3(0.0f, 3.0f, -15.0f)));
+        }
+        m_kdModelInsts.push_back(rockInst);
+    }
+    ModelInstance rubiksCubeInst(&m_rubiksCube);
+    rubiksCubeInst.transform(glm::scale(glm::vec3(0.1f, 0.1f, 0.1f)));
+    rubiksCubeInst.transform(glm::translate(glm::vec3(-1.0f, 2.45f, -1.0f)));
+    m_texturedModelInsts.push_back(rubiksCubeInst);
+    ModelInstance goldRingInst(&m_goldRing);
+    goldRingInst.transform(glm::scale(glm::vec3(0.15f, 0.15f, 0.15f)));
+    goldRingInst.transform(glm::rotate(glm::radians(-20.0f), glm::vec3(0, 0, 1)));
+    goldRingInst.transform(glm::rotate(glm::radians(5.0f), glm::vec3(1, 0, 0)));
+    goldRingInst.transform(glm::translate(glm::vec3(2.5f, 0.62f, 1.5f)));
+    m_kdModelInsts.push_back(goldRingInst);
+    ModelInstance houseInst(&m_house);
+    houseInst.transform(glm::scale(glm::vec3(3.5f, 4.0f, 3.5f)));
+    houseInst.transform(glm::translate(glm::vec3(15.0f, 1.32f, 15.0f)));
+    m_kdModelInsts.push_back(houseInst);
+
+    for (int i = 0; i < 3; ++i) {
+        TreeInstance tree;
+        if (i == 0) {
+            tree = TreeInstance(this, &m_cylinder, glm::vec3(-5, 1, 3));
+        }
+        else if (i == 1) {
+            tree = TreeInstance(this, &m_cylinder, glm::vec3(-7, 3.2f, -6));
+        }
+        else {
+            tree = TreeInstance(this, &m_cylinder, glm::vec3(7.2f, 1.8f, -7.0f));
+        }
+        m_trees.push_back(tree);
+    }
 
 	// I don't have a mesh/geometry class for this alpha texture yet
 	// alphat mesh
@@ -367,14 +398,20 @@ void Scene::blur(GLuint srcFbo, const Texture& srcDepthBuffer, const Texture& sr
 void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType renderType, float alpha) {
     if (renderType == RenderType::Shadow) {
         m_shadowProg.use();
-        setPVM(m_shadowProg, P, V, m_rubiksCubeInst.getM());
-        m_rubiksCubeInst.setUniformLocations(-1, -1, -1);
+        for (ModelInstance& inst : m_texturedModelInsts) {
+            setPVM(m_shadowProg, P, V, inst.getM());
+            inst.setUniformLocations(-1, -1, -1);
+            inst.draw();
+        }
     }
     else if (renderType == RenderType::Pick) {
         m_pickProg.use();
-        m_rubiksCubeInst.setUniformLocations(-1, -1, -1);
-        setPVM(m_pickProg, P, V, m_rubiksCubeInst.getM());
-        glUniform1i(m_pickProg["id"], m_rubiksCube.getId());
+        for (ModelInstance& inst : m_texturedModelInsts) {
+            inst.setUniformLocations(-1, -1, -1);
+            setPVM(m_pickProg, P, V, inst.getM());
+            glUniform1i(m_pickProg["id"], inst.getId());
+            inst.draw();
+        }
     }
     else {
         m_textureKdProg.use();
@@ -389,29 +426,27 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
         glUniform1i(m_textureKdProg["flShadow"], 2);
         glUniform1f(m_textureKdProg["u_alpha"], alpha);
         setCommonUniforms(m_textureKdProg);
-        setMatrixUniforms(m_textureKdProg, P, V, m_rubiksCubeInst.getM());
-        m_rubiksCubeInst.setUniformLocations(-1, m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
+        for (ModelInstance& inst : m_texturedModelInsts) {
+            setMatrixUniforms(m_textureKdProg, P, V, inst.getM());
+            inst.setUniformLocations(-1, m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
+            inst.draw();
+        }
     }
-    m_rubiksCubeInst.draw();
 
     if (renderType == RenderType::Shadow) {
-        setPVM(m_shadowProg, P, V, m_tree1.getM());
-        m_tree1.setUniformLocations(-1, -1, -1);
-        m_tree1.draw();
-        setPVM(m_shadowProg, P, V, m_goldRingInst.getM());
-        m_goldRingInst.setUniformLocations(-1, -1, -1);
-        m_goldRingInst.draw();
+        for (ModelInstance& inst : m_kdModelInsts) {
+            setPVM(m_shadowProg, P, V, inst.getM());
+            inst.setUniformLocations(-1, -1, -1);
+            inst.draw();
+        }
     }
     else if (renderType == RenderType::Pick) {
-        m_tree1.setUniformLocations(-1, -1, -1);
-        setPVM(m_pickProg, P, V, m_tree1.getM());
-        glUniform1i(m_pickProg["id"], m_tree.getId());
-        m_tree1.draw();
-
-        m_goldRingInst.setUniformLocations(-1, -1, -1);
-        setPVM(m_pickProg, P, V, m_goldRingInst.getM());
-        glUniform1i(m_pickProg["id"], m_goldRing.getId());
-        m_goldRingInst.draw();
+        for (ModelInstance& inst : m_kdModelInsts) {
+            setPVM(m_pickProg, P, V, inst.getM());
+            glUniform1i(m_pickProg["id"], inst.getId());
+            inst.setUniformLocations(-1, -1, -1);
+            inst.draw();
+        }
     }
     else {
         m_constantKdProg.use();
@@ -421,30 +456,32 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
         glActiveTexture(GL_TEXTURE1);
         m_texFlShadowMap.bind();
         glUniform1i(m_constantKdProg["flShadow"], 1);
-        setCommonUniforms(m_constantKdProg);
-        setMatrixUniforms(m_constantKdProg, P, V, m_tree1.getM());
         glUniform1f(m_constantKdProg["u_alpha"], alpha);
-        m_tree1.setUniformLocations(m_constantKdProg["Kd"], m_constantKdProg["Ks"], m_constantKdProg["Ns"]);
-        m_tree1.draw();
+
         setCommonUniforms(m_constantKdProg);
-        setMatrixUniforms(m_constantKdProg, P, V, m_goldRingInst.getM());
-        m_goldRingInst.setUniformLocations(m_constantKdProg["Kd"], m_constantKdProg["Ks"], m_constantKdProg["Ns"]);
-        m_goldRingInst.draw();
+        for (ModelInstance& inst : m_kdModelInsts) {
+            setMatrixUniforms(m_constantKdProg, P, V, inst.getM());
+            inst.setUniformLocations(m_constantKdProg["Kd"], m_constantKdProg["Ks"], m_constantKdProg["Ns"]);
+            inst.draw();
+        }
     }
 
     if (renderType == RenderType::Shadow) {
-        m_tree2.setUniformLocations(-1, -1, -1);
-        m_tree2.draw(m_shadowProg, P, V, true);
+        for (TreeInstance& tree : m_trees) {
+            tree.setUniformLocations(-1, -1, -1);
+            tree.draw(m_shadowProg, P, V, true);
+        }
     }
     else if (renderType == RenderType::Pick) {
         glUniform1i(m_pickProg["id"], m_cylinder.getId());
-        m_tree2.setUniformLocations(-1, -1, -1);
-        m_tree2.draw(m_pickProg, P, V, true);
+        for (TreeInstance& tree : m_trees) {
+            tree.setUniformLocations(-1, -1, -1);
+            tree.draw(m_pickProg, P, V, true);
+        }
     }
     else {
         m_bumpmapProg.use();
         glUniform1f(m_bumpmapProg["u_alpha"], alpha);
-        m_tree2.setUniformLocations(m_bumpmapProg["Kd"], m_bumpmapProg["Ks"], m_bumpmapProg["Ns"]);
         setCommonUniforms(m_bumpmapProg);
         glActiveTexture(GL_TEXTURE0);
         m_texSunShadowMap.bind();
@@ -455,7 +492,10 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
         glActiveTexture(GL_TEXTURE2);
         m_texBmapHeightfield.bind();
         glUniform1i(m_bumpmapProg["heightfield"], 2);
-        m_tree2.draw(m_bumpmapProg, P, V, false);
+        for (TreeInstance& tree : m_trees) {
+            tree.setUniformLocations(m_bumpmapProg["Kd"], m_bumpmapProg["Ks"], m_bumpmapProg["Ns"]);
+            tree.draw(m_bumpmapProg, P, V, false);
+        }
     }
 }
 

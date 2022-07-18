@@ -5,9 +5,9 @@
 
 static const int numCircleTriangles = 6;
 
-SmokeSystem::SmokeSystem(uint numParticles) : 
-							m_center(0.0f, 0.0f, 0.0f),
-							m_radius(0.25f),
+SmokeSystem::SmokeSystem(uint numParticles, const glm::vec3 &center) : 
+							m_center(center),
+							m_radius(0.5f),
 							m_accT(0.0f),
 							m_vy(1.0f),
 							m_particles(numParticles),
@@ -100,7 +100,7 @@ SmokeSystem::~SmokeSystem() {
 }
 
 glm::vec3 SmokeSystem::getRandAccel() {
-	float mult = 0.1f;
+	float mult = 0.24f;
 	float r1 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * mult;
 	float r2 = (float(rand()) / float(RAND_MAX) * 2.0f - 1.0f) * mult;
 	return glm::vec3(r1, 0.0f, r2);
@@ -134,6 +134,6 @@ void SmokeSystem::initParticle(SmokeParticle& p, float age) {
 	float mag = glm::sqrt(float(rand()) / float(RAND_MAX));
 	p.pos = m_center + glm::vec3(glm::cos(theta) * m_radius * mag, m_vy * age, glm::sin(theta) * m_radius * mag);
 	theta = float(rand()) / float(RAND_MAX) * 2.0f * glm::pi<float>();
-	mag = glm::sqrt(float(rand()) / float(RAND_MAX) * 0.01f);
+	mag = glm::sqrt(float(rand()) / float(RAND_MAX) * 0.1f);
 	p.vel = glm::vec3(glm::cos(theta) * mag, m_vy, glm::sin(theta) * mag);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GL/glew.h>
+#include <vector>
 
 #include "Camera.h"
 #include "Texture.h"
@@ -79,11 +80,12 @@ private:
 		m_texSceneDepth;
 	Texture m_texBlurs[2];
 
-	Model m_tree, m_rubiksCube, m_goldRing;
-	ModelInstance m_tree1, m_rubiksCubeInst, m_goldRingInst;
+	Model m_rock, m_rubiksCube, m_goldRing, m_house;
+	std::vector<ModelInstance> m_texturedModelInsts, m_kdModelInsts;
 	GridMesh m_gridMesh;
 	Cylinder m_cylinder;
-	TreeInstance m_tree2;
+	//TreeInstance m_tree2;
+	std::vector<TreeInstance> m_trees;
 	SmokeSystem m_smoke;
 	Skybox m_skybox;
 	SkyboxInstance m_daySkybox, m_nightSkybox;
