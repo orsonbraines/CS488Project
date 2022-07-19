@@ -11,7 +11,6 @@ Cylinder::Cylinder() : m_id(255) {
 	const float lv = 6;
 
 	const int vboSize = floatsPerVertex * m_nVertices * sizeof(float);
-
 	float* vboData = new float[floatsPerVertex * m_nVertices];
 	int idx = 0;
 
@@ -82,7 +81,7 @@ Cylinder::Cylinder() : m_id(255) {
 	vboData[idx++] = 0.0f;
 
 	ushort* iboData = new ushort[m_nVertices + m_nDivisions + 1];
-	size_t iboSize = (m_nVertices + m_nDivisions + 1) * sizeof(short);
+	size_t iboSize = (m_nVertices + m_nDivisions + 1) * sizeof(ushort);
 	for (int i = 0; i < m_nVertices; ++i) {
 		iboData[i] = i;
 	}
@@ -141,6 +140,6 @@ void CylinderInstance::draw() const {
 	assert(m_cyl);
 	glBindVertexArray(m_cyl->getVao());
 	glDrawElements(GL_TRIANGLE_STRIP, m_cyl->getNumVertices() - 1, GL_UNSIGNED_SHORT, (void*)0);
-	glDrawElements(GL_TRIANGLE_FAN, m_cyl->getNumDivisions() + 2, GL_UNSIGNED_SHORT, (void*)((m_cyl->getNumVertices() - 1)*sizeof(short)));
+	glDrawElements(GL_TRIANGLE_FAN, m_cyl->getNumDivisions() + 2, GL_UNSIGNED_SHORT, (void*)((m_cyl->getNumVertices() - 1)*sizeof(ushort)));
 	glBindVertexArray(0);
 }

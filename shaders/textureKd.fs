@@ -79,9 +79,13 @@ vec3 flShade(vec3 Kd) {
 
 
 void main() {
-	vec3 Kd = texture(sampler, vec2(fs_uv.s, 1.0 - fs_uv.t)).rgb;
+	vec4 sampledTexture = texture(sampler, vec2(fs_uv.s, 1.0 - fs_uv.t));
+	if(sampledTexture.a < 0.1) {
+		discard;
+	}
+	vec3 Kd = sampledTexture.rgb;
 	vec3 colour = ambientColour * Kd;
 	colour += sunShade(Kd);
 	colour += flShade(Kd);
-	colour_out = vec4(colour, fs_alpha);
+	colour_out = vec4(colour, fs_alpha * sampledTexture.a);
 }

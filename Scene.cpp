@@ -23,6 +23,9 @@ Scene::Scene() :
     m_goldRing("models/goldring.obj"),
     m_house("models/house.obj"),
 	m_cylinder(),
+    m_leaves(2.0f, 1.0f),
+    m_tombstone(),
+    m_tombstoneInst(&m_tombstone),
 	m_gridMesh(128,128),
 	m_smoke(15000, glm::vec3(15.0f, 9.0f, 17.0f)),
     m_binoMode(false),
@@ -46,6 +49,10 @@ Scene::Scene() :
 	m_texBmapHeightfield.setWrapT(GL_MIRRORED_REPEAT);
     m_texBmapHeightfield.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
 	m_texBmapHeightfield.loadBMP("textures/treetexture.bmp", true);
+    m_texBmapRip.setWrapS(GL_MIRRORED_REPEAT);
+    m_texBmapRip.setWrapT(GL_MIRRORED_REPEAT);
+    m_texBmapRip.setMinFilter(GL_LINEAR_MIPMAP_LINEAR);
+    m_texBmapRip.loadBMP("textures/rip.bmp", true);
 	m_texBino.loadBMP("textures/binoculars.bmp");
 
 	// Set the model instance transforms
@@ -77,17 +84,20 @@ Scene::Scene() :
     houseInst.transform(glm::scale(glm::vec3(3.5f, 4.0f, 3.5f)));
     houseInst.transform(glm::translate(glm::vec3(15.0f, 1.32f, 15.0f)));
     m_kdModelInsts.push_back(houseInst);
+    m_tombstoneInst.transform(glm::scale(glm::vec3(1.0f, 1.0f, 0.25f)));
+    m_tombstoneInst.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(0, 1, 0)));
+    m_tombstoneInst.transform(glm::translate(glm::vec3(3.0f, 2.8f, 13.0f)));
 
     for (int i = 0; i < 3; ++i) {
         TreeInstance tree;
         if (i == 0) {
-            tree = TreeInstance(this, &m_cylinder, glm::vec3(-5, 1, 3));
+            tree = TreeInstance(this, &m_cylinder, &m_leaves, glm::vec3(-5, 1, 3));
         }
         else if (i == 1) {
-            tree = TreeInstance(this, &m_cylinder, glm::vec3(-7, 3.2f, -6));
+            tree = TreeInstance(this, &m_cylinder, &m_leaves, glm::vec3(-7, 3.2f, -6));
         }
         else {
-            tree = TreeInstance(this, &m_cylinder, glm::vec3(7.2f, 1.8f, -7.0f));
+            tree = TreeInstance(this, &m_cylinder, &m_leaves, glm::vec3(7.2f, 1.8f, -7.0f));
         }
         m_trees.push_back(tree);
     }
@@ -248,6 +258,7 @@ void Scene::render() {
 
     renderObjects(m_cam.getP(), m_cam.getV(), RenderType::Normal, 1.0f);
     renderGround(m_cam.getP(), m_cam.getV(), 1.0f);
+    renderLeaves(m_cam.getP(), m_cam.getV(), 1.0f);
 
     // draw the water and mark with stencil
     glEnable(GL_STENCIL_TEST);
@@ -283,6 +294,7 @@ void Scene::render() {
     glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     renderObjects(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), RenderType::Normal, 0.3f);
     renderGround(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.3f);
+    renderLeaves(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.3f);
     glDisable(GL_CLIP_DISTANCE0);
     glCullFace(GL_BACK);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -471,6 +483,9 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
             tree.setUniformLocations(-1, -1, -1);
             tree.draw(m_shadowProg, P, V, true);
         }
+        m_tombstoneInst.setUniformLocations(-1, -1, -1);
+        setPVM(m_shadowProg, P, V, m_tombstoneInst.getM());
+        m_tombstoneInst.draw();
     }
     else if (renderType == RenderType::Pick) {
         glUniform1i(m_pickProg["id"], m_cylinder.getId());
@@ -478,6 +493,10 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
             tree.setUniformLocations(-1, -1, -1);
             tree.draw(m_pickProg, P, V, true);
         }
+        glUniform1i(m_pickProg["id"], m_tombstone.getId());
+        m_tombstoneInst.setUniformLocations(-1, -1, -1);
+        setPVM(m_pickProg, P, V, m_tombstoneInst.getM());
+        m_tombstoneInst.draw();
     }
     else {
         m_bumpmapProg.use();
@@ -496,6 +515,10 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
             tree.setUniformLocations(m_bumpmapProg["Kd"], m_bumpmapProg["Ks"], m_bumpmapProg["Ns"]);
             tree.draw(m_bumpmapProg, P, V, false);
         }
+        m_texBmapRip.bind();
+        m_tombstoneInst.setUniformLocations(m_bumpmapProg["Kd"], m_bumpmapProg["Ks"], m_bumpmapProg["Ns"]);
+        setMatrixUniforms(m_bumpmapProg, P, V, m_tombstoneInst.getM());
+        m_tombstoneInst.draw();
     }
 }
 
@@ -555,6 +578,26 @@ void Scene::renderWater(const glm::mat4& P, const glm::mat4& V) {
     glUniform1f(m_waterProg["maxAlphaDepth"], 0.25f);
     m_gridMesh.draw();
 
+}
+
+void Scene::renderLeaves(const glm::mat4& P, const glm::mat4& V, float alpha) {
+    m_textureKdProg.use();
+    glActiveTexture(GL_TEXTURE1);
+    m_texSunShadowMap.bind();
+    glUniform1i(m_textureKdProg["sunShadow"], 1);
+    glActiveTexture(GL_TEXTURE2);
+    m_texFlShadowMap.bind();
+    glUniform1i(m_textureKdProg["flShadow"], 2);
+    glUniform1f(m_textureKdProg["u_alpha"], alpha);
+    setCommonUniforms(m_textureKdProg);
+    /*glm::mat4 M = glm::translate(glm::vec3(2.0f, 3.8f, -2.0f));
+    setMatrixUniforms(m_textureKdProg, P, V, M);
+    m_leaves.setUniformLocations(m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
+    m_leaves.draw(m_textureKdProg);*/
+    m_leaves.setUniformLocations(m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
+    for (TreeInstance& tree : m_trees) {
+        tree.drawLeaves(m_textureKdProg, P, V);
+    }
 }
 
 void Scene::setPVM(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M) {

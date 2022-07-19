@@ -59,8 +59,9 @@ static void sLoadDDS(const std::string& texFilePath, GLenum target, int* mipsOut
 	uint blockSize = textureFormat == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT ? 8 : 16;
 	uint size = w * h / 16 * blockSize;
 	assert(size == linearSize);
-	assert(w == h);
 	assert(w > 0 && h > 0);
+	assert((w >> (mips - 1)) >= 1);
+	assert((h >> (mips - 1)) >= 1);
 	assert(((w - 1) & w) == 0);
 	assert(((h - 1) & h) == 0);
 	char* buf = new char[size];

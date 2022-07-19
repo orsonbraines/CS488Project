@@ -4,31 +4,18 @@
 #include "Tree.h"
 #include "Scene.h"
 
-TreeInstance::TreeInstance() : m_scene(nullptr), m_KdUniformLoc(-1), m_KsUniformLoc(-1), m_NsUniformLoc(-1) {}
+TreeInstance::TreeInstance() : m_scene(nullptr), m_leaves(nullptr), m_KdUniformLoc(-1), m_KsUniformLoc(-1), m_NsUniformLoc(-1) {}
 
-TreeInstance::TreeInstance(Scene *scene, Cylinder* cyl, const glm::vec3& pos) : m_scene(scene), m_KdUniformLoc(-1), m_KsUniformLoc(-1), m_NsUniformLoc(-1) {
+TreeInstance::TreeInstance(Scene *scene, Cylinder* cyl, Leaves *leaves, const glm::vec3& pos) : m_scene(scene), m_leaves(leaves), m_KdUniformLoc(-1), m_KsUniformLoc(-1), m_NsUniformLoc(-1) {
 	CylinderInstance trunk(cyl);
 	trunk.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0)));
 	trunk.transform(glm::scale(glm::vec3(0.3f, 4.0f, 0.3f)));
 	trunk.transform(glm::translate(pos));
 	m_cyls.push_back(trunk);
 
-	CylinderInstance branch1(cyl);	
-	branch1.transform(glm::scale(glm::vec3(0.1f, 0.1f, 2.0f)));
-	branch1.transform(glm::translate(pos + glm::vec3(0, 2, 0)));
-	m_cyls.push_back(branch1);
-
-	CylinderInstance branch2(cyl);
-	branch2.transform(glm::scale(glm::vec3(0.1f, 0.1f, 2.0f)));
-	branch2.transform(glm::rotate(glm::radians(120.0f), glm::vec3(0, 1, 0)));
-	branch2.transform(glm::translate(pos + glm::vec3(0, 2.5f, 0)));
-	m_cyls.push_back(branch2);
-
-	CylinderInstance branch3(cyl);
-	branch3.transform(glm::scale(glm::vec3(0.1f, 0.1f, 2.0f)));
-	branch3.transform(glm::rotate(glm::radians(240.0f), glm::vec3(0, 1, 0)));
-	branch3.transform(glm::translate(pos + glm::vec3(0, 3.0f, 0)));
-	m_cyls.push_back(branch3);
+	addBranch(cyl, pos, 2.0f, 0.0f);
+	addBranch(cyl, pos, 2.5f, glm::radians(120.f));
+	addBranch(cyl, pos, 3.0f, glm::radians(240.f));
 }
 
 void TreeInstance::setUniformLocations(GLint KdUniformLoc, GLint KsUniformLoc, GLint NsUniformLoc) {
@@ -50,4 +37,25 @@ void TreeInstance::draw(const ShaderProgram& p, const glm::mat4& P, const glm::m
 		}
 		c.draw();
 	}
+}
+
+void TreeInstance::drawLeaves(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V) const {
+	for (const glm::mat4& M : m_leafMats) {
+		m_scene->setMatrixUniforms(p, P, V, M);
+		m_leaves->draw(p);
+	}
+}
+
+void TreeInstance::addBranch(Cylinder* cyl, const glm::vec3& pos, float h, float theta) {
+	CylinderInstance branch(cyl);
+	branch.transform(glm::scale(glm::vec3(0.1f, 0.1f, 2.0f)));
+	branch.transform(glm::rotate(theta, glm::vec3(0, 1, 0)));
+	branch.transform(glm::translate(pos + glm::vec3(0, h, 0)));
+	m_cyls.push_back(branch);
+	for (int i = 0; i < 3; ++i) {
+		m_leafMats.push_back(glm::translate(pos + glm::vec3(0, h + 0.05f, 0))
+			* glm::rotate(theta - glm::pi<float>() / 2.0f, glm::vec3(0, 1, 0))
+			* glm::rotate(i * glm::pi<float>() / 1.5f + 0.5f, glm::vec3(1, 0, 0))
+			* glm::scale(glm::vec3(2.0f, 0.3f, 1.0f)));
+	}	
 }

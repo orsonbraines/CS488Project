@@ -14,6 +14,8 @@
 #include "Flashlight.h"
 #include "Skybox.h"
 #include "Tree.h"
+#include "Tombstone.h"
+#include "Leaves.h"
 
 enum class RenderType {
 	Normal,
@@ -46,6 +48,7 @@ private:
 	void renderSmoke(const glm::mat4& P, const glm::mat4& V);
 	void renderGround(const glm::mat4& P, const glm::mat4& V, float alpha);
 	void renderWater(const glm::mat4& P, const glm::mat4& V);
+	void renderLeaves(const glm::mat4& P, const glm::mat4& V, float alpha);
 	void blur(GLuint srcFbo, const Texture &srcDepthBuffer, const Texture &srcColourBuffer, GLuint dstFbo); // srcFbo and dst Fbo must be distinct
 	void setCommonUniforms(const ShaderProgram& p);
 	glm::mat4 getReflectionMatrix() const; // reflection about xz plane at given y
@@ -71,6 +74,7 @@ private:
 	Texture m_texRubiksCube,
 		m_texHeightmap,
 		m_texBmapHeightfield,
+		m_texBmapRip,
 		m_texBino,
 		m_texSunShadowMap,
 		m_texFlShadowMap,
@@ -84,7 +88,9 @@ private:
 	std::vector<ModelInstance> m_texturedModelInsts, m_kdModelInsts;
 	GridMesh m_gridMesh;
 	Cylinder m_cylinder;
-	//TreeInstance m_tree2;
+	Leaves m_leaves;
+	Tombstone m_tombstone;
+	TombstoneInstance m_tombstoneInst;
 	std::vector<TreeInstance> m_trees;
 	SmokeSystem m_smoke;
 	Skybox m_skybox;
