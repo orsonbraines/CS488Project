@@ -18,6 +18,7 @@ public:
 	void drawLeaves(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V) const;
 	void setUniformLocations(GLint KdUniformLoc, GLint KsUniformLoc, GLint NsUniformLoc);
 	const glm::mat4& getM() { return m_cyls.front().getM(); }
+	bool collides(const Sphere& s) const;
 private:
 	void addBranch(Cylinder *cyl, const glm::vec3& pos, float h, float theta);
 	std::vector<CylinderInstance> m_cyls;

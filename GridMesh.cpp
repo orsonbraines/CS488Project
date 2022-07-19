@@ -2,7 +2,15 @@
 
 #include "GridMesh.h"
 
-GridMesh::GridMesh(uint xDivs, uint yDivs) : m_xDivs(xDivs), m_yDivs(yDivs), m_numIndices((xDivs - 1) * (yDivs - 1) * 6), m_vbo(0), m_ibo(0), m_vao(0) {
+GridMesh::GridMesh(uint xDivs, uint yDivs) : 
+	m_xDivs(xDivs), 
+	m_yDivs(yDivs), 
+	m_numIndices((xDivs - 1) * (yDivs - 1) * 6), 
+	m_vbo(0), 
+	m_ibo(0), 
+	m_vao(0), 
+	m_aabb(glm::vec3(0.0f), glm::vec3(1.0f))
+{
 	assert(xDivs >= 2 && yDivs >= 2);
 	// using ushort for ibo
 	assert(xDivs * yDivs * 2 <= (1u << 16));

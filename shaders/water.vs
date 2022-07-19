@@ -34,5 +34,4 @@ void main() {
 	fs_sunSpacePos = sunPVM * modelPos;
 	fs_fl = flPos - worldPos;
 	fs_flSpacePos = flPVM * modelPos;
-	//fs_uv = pos;
 }

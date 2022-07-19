@@ -4,8 +4,12 @@
 
 #include "Scene.h"
 #include "Util.h"
+#include "Collision.h"
 
-Scene::Scene() :
+Scene::Scene(AudioDevice &audioDevice) :
+    m_audioDevice(audioDevice),
+    m_collideSound("sounds/collide.wav"),
+    m_timeSinceLastSound(10.0f),
     m_flashlight(m_cam),
     m_textureKdProg("shaders/textureKd.vs", "shaders/textureKd.fs"),
     m_constantKdProg("shaders/constantKd.vs", "shaders/constantKd.fs"),
@@ -88,6 +92,11 @@ Scene::Scene() :
     m_tombstoneInst.transform(glm::rotate(glm::radians(-90.0f), glm::vec3(0, 1, 0)));
     m_tombstoneInst.transform(glm::translate(glm::vec3(3.0f, 2.8f, 13.0f)));
 
+    m_gridMeshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    float scaleY = 4.0f;
+    m_gridMeshM = glm::scale(glm::vec3(40.0f, scaleY, 40.0f)) * m_gridMeshM;
+    m_gridMeshM = glm::translate(glm::vec3(-20.0f, 0.0f, 20.f)) * m_gridMeshM;
+
     for (int i = 0; i < 3; ++i) {
         TreeInstance tree;
         if (i == 0) {
@@ -125,8 +134,7 @@ Scene::Scene() :
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// init camera pos
-	m_cam.m_pos = glm::vec3(0, m_reflectionPlane + 0.5f, 8);
-	//m_cam.yaw = glm::radians(180.0f);
+	m_cam.m_pos = glm::vec3(0, 5, 8);
 	m_cam.m_farZ = 100.0f;
 
     // Allocate the sun's shadow map
@@ -195,6 +203,7 @@ Scene::~Scene() {
 void Scene::tick(float dt) {
     m_sun.tick(dt);
     m_smoke.tick(dt);
+    m_timeSinceLastSound += dt;
 }
 
 uint Scene::pickTarget() {
@@ -529,10 +538,6 @@ void Scene::renderSmoke(const glm::mat4& P, const glm::mat4& V) {
 }
 
 void Scene::renderGround(const glm::mat4& P, const glm::mat4& V, float alpha) {
-    glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0));
-    float scaleY = 4.0f;
-    meshM = glm::scale(glm::vec3(40.0f, scaleY, 40.0f)) * meshM;
-    meshM = glm::translate(glm::vec3(-20.0f, 0.0f, 20.f)) * meshM;
     m_hmapProg.use();
     glActiveTexture(GL_TEXTURE0);
     m_texSunShadowMap.bind();
@@ -545,7 +550,7 @@ void Scene::renderGround(const glm::mat4& P, const glm::mat4& V, float alpha) {
     glUniform1i(m_hmapProg["sampler"], 2);
     glUniform1f(m_hmapProg["u_alpha"], alpha);
     setCommonUniforms(m_hmapProg);
-    setMatrixUniforms(m_hmapProg, P, V, meshM);
+    setMatrixUniforms(m_hmapProg, P, V, m_gridMeshM);
     glUniform3f(m_hmapProg["Ks"], 0, 0, 0);
     glUniform1f(m_hmapProg["Ns"], 0);
     glUniform3f(m_hmapProg["Kd"], 0.1f, 0.4f, 0.1f);
@@ -553,10 +558,7 @@ void Scene::renderGround(const glm::mat4& P, const glm::mat4& V, float alpha) {
 }
 
 void Scene::renderWater(const glm::mat4& P, const glm::mat4& V) {
-    glm::mat4 meshM = glm::rotate(glm::radians(-90.0f), glm::vec3(1, 0, 0));
     float scaleY = 4.0f;
-    meshM = glm::scale(glm::vec3(40.0f, scaleY, 40.0f)) * meshM;
-    meshM = glm::translate(glm::vec3(-20.0f, 0.0f, 20.f)) * meshM;
     m_waterProg.use();
     glActiveTexture(GL_TEXTURE0);
     m_texSunShadowMap.bind();
@@ -569,7 +571,7 @@ void Scene::renderWater(const glm::mat4& P, const glm::mat4& V) {
     glUniform1i(m_waterProg["sampler"], 2);
 
     setCommonUniforms(m_waterProg);
-    setMatrixUniforms(m_waterProg, P, V, meshM);
+    setMatrixUniforms(m_waterProg, P, V, m_gridMeshM);
     glUniform3f(m_waterProg["Ks"], 1.0f, 1.0f, 1.0f);
     glUniform1f(m_waterProg["Ns"], 50.0f);
     glUniform3f(m_waterProg["Kd"], 0.1f, 0.1f, 0.9f);
@@ -590,10 +592,6 @@ void Scene::renderLeaves(const glm::mat4& P, const glm::mat4& V, float alpha) {
     glUniform1i(m_textureKdProg["flShadow"], 2);
     glUniform1f(m_textureKdProg["u_alpha"], alpha);
     setCommonUniforms(m_textureKdProg);
-    /*glm::mat4 M = glm::translate(glm::vec3(2.0f, 3.8f, -2.0f));
-    setMatrixUniforms(m_textureKdProg, P, V, M);
-    m_leaves.setUniformLocations(m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
-    m_leaves.draw(m_textureKdProg);*/
     m_leaves.setUniformLocations(m_textureKdProg["Ks"], m_textureKdProg["Ns"]);
     for (TreeInstance& tree : m_trees) {
         tree.drawLeaves(m_textureKdProg, P, V);
@@ -645,5 +643,65 @@ void Scene::changeFocusDistance(float delta) {
     }
     if (m_binoFocusDist < minFocusDistance) {
         m_binoFocusDist = minFocusDistance;
+    }
+}
+
+bool Scene::detectCollision() const {
+    Sphere camSphere(0.2f, m_cam.m_pos);
+
+    for (const ModelInstance& m : m_texturedModelInsts) {
+        if (intersects(m.getAABB(), camSphere)) {
+            DBG(std::cerr << "collision detected with id " << m.getId() << std::endl);
+            return true;
+        }
+    }
+
+    for (const ModelInstance& m : m_kdModelInsts) {
+        if (intersects(m.getAABB(), camSphere)) {
+            DBG(std::cerr << "collision detected with id " << m.getId() << std::endl);
+            return true;
+        }
+    }
+
+    for (const TreeInstance& t : m_trees) {
+        if (t.collides(camSphere)) {
+            DBG(std::cerr << "collision detected with tree" << std::endl);
+            return true;
+        }
+    }
+
+    if (intersects(m_tombstoneInst.getAABB(), camSphere)) {
+        DBG(std::cerr << "collision detected with tombstone" << std::endl);
+        return true;
+    }
+
+    // collisions with the ground aren't very good without a better AABB
+    /*if (intersects(m_gridMesh.getAABB().transform(m_gridMeshM), camSphere)) {
+        DBG(std::cerr << "collision detected with ground" << std::endl);
+        return true;
+    }*/
+
+    AABB aeeaBoundaries[4] = { AABB(glm::vec3(20, -100, -100), glm::vec3(21, 100, 100)),
+                              AABB(glm::vec3(-21, -100, -100), glm::vec3(-20, 100, 100)),
+                              AABB(glm::vec3(-100, -100, -21), glm::vec3(100, 100, -20)),
+                              AABB(glm::vec3(-100, -100, 20), glm::vec3(100, 100, 21)), };
+    for (int i = 0; i < 4; ++i) {
+        if (intersects(aeeaBoundaries[i], camSphere)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void Scene::moveCamera(glm::vec3 delta) {
+    m_cam.m_pos += delta;
+    bool collision = detectCollision();
+    if (collision) {
+        m_cam.m_pos -= delta;
+        if (m_timeSinceLastSound > 0.5f) {
+            m_audioDevice.playSound(m_collideSound);
+            m_timeSinceLastSound = 0.0f;
+        }
     }
 }

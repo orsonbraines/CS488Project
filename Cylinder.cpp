@@ -3,7 +3,7 @@
 #include "Cylinder.h"
 
 
-Cylinder::Cylinder() : m_id(255) {
+Cylinder::Cylinder() : m_id(255), m_aabb(glm::vec3(-1,-1,0), glm::vec3(1, 1, 1)) {
 	m_nDivisions = 50;
 	m_nVertices = (m_nDivisions + 1) * 2 + 1;
 	const int floatsPerVertex = 14;
@@ -130,7 +130,8 @@ Cylinder::~Cylinder() {
 
 CylinderInstance::CylinderInstance(Cylinder* cylinder) :
 	m_cyl(cylinder),
-	m_M(1.0f) {}
+	m_M(1.0f),
+	m_aabb(m_cyl->getAABB())  {}
 
 CylinderInstance::CylinderInstance() :
 	m_cyl(nullptr),
@@ -142,4 +143,14 @@ void CylinderInstance::draw() const {
 	glDrawElements(GL_TRIANGLE_STRIP, m_cyl->getNumVertices() - 1, GL_UNSIGNED_SHORT, (void*)0);
 	glDrawElements(GL_TRIANGLE_FAN, m_cyl->getNumDivisions() + 2, GL_UNSIGNED_SHORT, (void*)((m_cyl->getNumVertices() - 1)*sizeof(ushort)));
 	glBindVertexArray(0);
+}
+
+void CylinderInstance::setM(const glm::mat4& M) { 
+	m_M = M; 
+	m_aabb = m_cyl->getAABB().transform(m_M);
+}
+
+void CylinderInstance::transform(const glm::mat4& T) { 
+	m_M = T * m_M; 
+	m_aabb = m_cyl->getAABB().transform(m_M);
 }

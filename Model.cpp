@@ -162,6 +162,17 @@ Model::Model(const std::string& fileName) : m_isTextured(false), m_id(++s_prevId
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	m_nIndices = iboData.size();
+
+	// get AABB
+	assert(verts.size() > 0);
+	glm::vec3 minBound = glm::vec3(verts[0][0], verts[0][1], verts[0][2]);
+	glm::vec3 maxBound = glm::vec3(verts[0][0], verts[0][1], verts[0][2]);
+	for (int i = 1; i < verts.size(); ++i) {
+		glm::vec3 p = glm::vec3(verts[i][0], verts[i][1], verts[i][2]);
+		minBound = glm::min(minBound, glm::vec3(p));
+		maxBound = glm::max(maxBound, glm::vec3(p));
+	}
+	m_aabb = AABB(minBound, maxBound);
 }
 
 Model::~Model() {
@@ -182,7 +193,8 @@ ModelInstance::ModelInstance(Model* model) :
 	m_KsUniformLoc(-1), 
 	m_NsUniformLoc(-1),
 	m_model(model),
-	m_M(1.0f) {}
+	m_M(1.0f),
+	m_aabb(m_model->getAABB()) {}
 
 void ModelInstance::draw() const {
 	assert(m_model);
@@ -208,4 +220,14 @@ void ModelInstance::setUniformLocations(GLint KdUniformLoc, GLint KsUniformLoc, 
 	m_KdUniformLoc = KdUniformLoc;
 	m_KsUniformLoc = KsUniformLoc;
 	m_NsUniformLoc = NsUniformLoc;
+}
+
+void ModelInstance::setM(const glm::mat4& M) { 
+	m_M = M;
+	m_aabb = m_model->getAABB().transform(m_M);
+}
+
+void ModelInstance::transform(const glm::mat4& T) { 
+	m_M = T * m_M; 
+	m_aabb = m_model->getAABB().transform(m_M);
 }

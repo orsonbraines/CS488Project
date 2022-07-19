@@ -7,6 +7,7 @@ Tombstone::Tombstone() : m_id(222) {
 	const int nVertsArch = 21;
 	const float archHeight = 0.3f;
 	m_nVertices = (nVertsArch + 2) * 4;
+	m_aabb = AABB(glm::vec3(0,0,0), glm::vec3(1, 1 + archHeight, 1));
 
 	const int vboSize = floatsPerVertex * m_nVertices * sizeof(float);
 	float* vboData = new float[floatsPerVertex * m_nVertices];
@@ -216,7 +217,8 @@ TombstoneInstance::TombstoneInstance(Tombstone* tombstone) :
 	m_KsUniformLoc(-1),
 	m_NsUniformLoc(-1), 
 	m_tomb(tombstone), 
-	m_M(1.0f) {}
+	m_M(1.0f),
+	m_aabb(m_tomb->getAABB()) {}
 
 void TombstoneInstance::setUniformLocations(GLint KdUniformLoc, GLint KsUniformLoc, GLint NsUniformLoc) {
 	m_KdUniformLoc = KdUniformLoc;
@@ -235,4 +237,14 @@ void TombstoneInstance::draw() const {
 	glDrawElements(GL_TRIANGLE_FAN, vertsPerFace, GL_UNSIGNED_SHORT, (void*)(vertsPerFace * sizeof(ushort)));
 	glDrawElements(GL_TRIANGLE_STRIP, 2 * vertsPerFace, GL_UNSIGNED_SHORT, (void*)(2 * vertsPerFace * sizeof(ushort)));
 	glBindVertexArray(0);
+}
+
+void TombstoneInstance::setM(const glm::mat4& M) {
+	m_M = M;
+	m_aabb = m_tomb->getAABB().transform(m_M);
+}
+
+void TombstoneInstance::transform(const glm::mat4& T) {
+	m_M = T * m_M;
+	m_aabb = m_tomb->getAABB().transform(m_M);
 }

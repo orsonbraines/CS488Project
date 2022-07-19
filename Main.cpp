@@ -50,7 +50,7 @@ int main(int ArgCount, char** Args)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetSwapInterval(1);
-    SDL_Window* window = SDL_CreateWindow("SDL OpenGL Window", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, WindowFlags);
+    SDL_Window* window = SDL_CreateWindow("Orson's Scavenger Hunt - CS488 Project", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, WindowFlags);
     assert(window);
     SDL_GLContext context = SDL_GL_CreateContext(window);
     int err = SDL_SetRelativeMouseMode(SDL_TRUE);
@@ -76,7 +76,7 @@ int main(int ArgCount, char** Args)
         glDebugMessageCallback(loggingCallback, nullptr);
 
         AudioDevice audioDevice;
-        Scene scene;
+        Scene scene(audioDevice);
         UI ui(&scene, audioDevice);
 
         bool running = true;
@@ -172,6 +172,8 @@ int main(int ArgCount, char** Args)
                 }
             }
 
+            glm::vec3 camDelta(0.0);
+
             {
                 int numkeys;
                 const Uint8* keystate = SDL_GetKeyboardState(&numkeys);
@@ -181,22 +183,22 @@ int main(int ArgCount, char** Args)
                 glm::vec3 right = dirs[0];
                 glm::vec3 up = dirs[1];
                 if (keystate[SDL_SCANCODE_W]) {
-                    scene.getCamera().m_pos += 0.03f * forward;
+                    camDelta += 0.03f * forward;
                 }
                 if (keystate[SDL_SCANCODE_S]) {
-                    scene.getCamera().m_pos -= 0.03f * forward;
+                    camDelta -= 0.03f * forward;
                 }
                 if (keystate[SDL_SCANCODE_A]) {
-                    scene.getCamera().m_pos -= 0.03f * right;
+                    camDelta -= 0.03f * right;
                 }
                 if (keystate[SDL_SCANCODE_D]) {
-                    scene.getCamera().m_pos += 0.03f * right;
+                    camDelta += 0.03f * right;
                 }
                 if (keystate[SDL_SCANCODE_E]) {
-                    scene.getCamera().m_pos += 0.03f * up;
+                    camDelta += 0.03f * up;
                 }
                 if (keystate[SDL_SCANCODE_Q]) {
-                    scene.getCamera().m_pos -= 0.03f * up;
+                    camDelta -= 0.03f * up;
                 }
                 if (!ui.getShowHint()) {
                     if (keystate[SDL_SCANCODE_RIGHT]) {
@@ -213,7 +215,7 @@ int main(int ArgCount, char** Args)
                     }
                 }
             }
-
+            scene.moveCamera(camDelta);
 
             SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
             glViewport(0, 0, framebuffer_w, framebuffer_h);

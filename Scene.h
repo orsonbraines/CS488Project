@@ -16,6 +16,7 @@
 #include "Tree.h"
 #include "Tombstone.h"
 #include "Leaves.h"
+#include "Sound.h"
 
 enum class RenderType {
 	Normal,
@@ -25,7 +26,7 @@ enum class RenderType {
 
 class Scene {
 public:
-	Scene();
+	Scene(AudioDevice &audioDevice);
 	~Scene();
 	void render();
 	Flashlight& getFlashlight() { return m_flashlight; }
@@ -43,6 +44,8 @@ public:
 	uint pickTarget();
 	void setMatrixUniforms(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
 	void setPVM(const ShaderProgram& p, const glm::mat4& P, const glm::mat4& V, const glm::mat4& M);
+	void moveCamera(glm::vec3 delta);
+	bool detectCollision() const;
 private:
 	void renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType renderType, float alpha);
 	void renderSmoke(const glm::mat4& P, const glm::mat4& V);
@@ -87,6 +90,7 @@ private:
 	Model m_rock, m_rubiksCube, m_goldRing, m_house;
 	std::vector<ModelInstance> m_texturedModelInsts, m_kdModelInsts;
 	GridMesh m_gridMesh;
+	glm::mat4 m_gridMeshM;
 	Cylinder m_cylinder;
 	Leaves m_leaves;
 	Tombstone m_tombstone;
@@ -104,4 +108,8 @@ private:
 	uint m_sceneWidth, m_sceneHeight;
 	const float m_reflectionPlane;
 	float m_binoFocusDist;
+
+	AudioDevice& m_audioDevice;
+	Sound m_collideSound;
+	float m_timeSinceLastSound;
 };

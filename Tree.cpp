@@ -52,10 +52,19 @@ void TreeInstance::addBranch(Cylinder* cyl, const glm::vec3& pos, float h, float
 	branch.transform(glm::rotate(theta, glm::vec3(0, 1, 0)));
 	branch.transform(glm::translate(pos + glm::vec3(0, h, 0)));
 	m_cyls.push_back(branch);
-	for (int i = 0; i < 3; ++i) {
+	for (int i = 0; i < 2; ++i) {
 		m_leafMats.push_back(glm::translate(pos + glm::vec3(0, h + 0.05f, 0))
 			* glm::rotate(theta - glm::pi<float>() / 2.0f, glm::vec3(0, 1, 0))
-			* glm::rotate(i * glm::pi<float>() / 1.5f + 0.5f, glm::vec3(1, 0, 0))
+			* glm::rotate(i * glm::pi<float>(), glm::vec3(1, 0, 0))
 			* glm::scale(glm::vec3(2.0f, 0.3f, 1.0f)));
 	}	
+}
+
+bool TreeInstance::collides(const Sphere& s) const {
+	for (const CylinderInstance& c : m_cyls) {
+		if (intersects(c.getAABB(), s)) {
+			return true;
+		}
+	}
+	return false;
 }
