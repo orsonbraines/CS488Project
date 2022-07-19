@@ -183,22 +183,22 @@ int main(int ArgCount, char** Args)
                 glm::vec3 right = dirs[0];
                 glm::vec3 up = dirs[1];
                 if (keystate[SDL_SCANCODE_W]) {
-                    camDelta += 3 * frameTime * forward;
+                    camDelta += 4.5f * frameTime * forward;
                 }
                 if (keystate[SDL_SCANCODE_S]) {
-                    camDelta -= 3 * frameTime * forward;
+                    camDelta -= 4.5f * frameTime * forward;
                 }
                 if (keystate[SDL_SCANCODE_A]) {
-                    camDelta -= 3 * frameTime * right;
+                    camDelta -= 4.5f * frameTime * right;
                 }
                 if (keystate[SDL_SCANCODE_D]) {
-                    camDelta += 3 * frameTime * right;
+                    camDelta += 4.5f * frameTime * right;
                 }
                 if (keystate[SDL_SCANCODE_E]) {
-                    camDelta += 3 * frameTime * up;
+                    camDelta += 4.5f * frameTime * up;
                 }
                 if (keystate[SDL_SCANCODE_Q]) {
-                    camDelta -= 3 * frameTime * up;
+                    camDelta -= 4.5f * frameTime * up;
                 }
                 if (!ui.getShowHint()) {
                     if (keystate[SDL_SCANCODE_RIGHT]) {
