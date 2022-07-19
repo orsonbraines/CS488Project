@@ -87,3 +87,16 @@ I created the fail and pass sounds in LMMS and recorded the collision sound with
 # Models
 
 I generated the .obj and .mtl files using Blender. For the models that did not come from .obj files (the tombstone and tree) I generated the vertex buffer data in code.
+
+# Objectives
+
+1. UI with keyboard shortcuts to control in game time.
+2. Perlin noise to generate terrain heightfield.
+3. Bump Mapping using heightfield.
+4. Shadow mapping.
+5. Reflection using stencil buffer.
+6. Transparency with alpha blending.
+7. Simulate smoke with a particle system.
+8. Skybox.
+9. Depth of field.
+10. Synchronize sound effects with game events.
