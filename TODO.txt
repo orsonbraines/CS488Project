@@ -1,8 +1,0 @@
-Next Steps
-- add a couple of models / kill the tex cube
-- picking
-- picking sound
-- collision detection
-- improve texture for trees
-- add leaves for trees
-- improve resolution of shadows

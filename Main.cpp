@@ -27,16 +27,16 @@ void addTimeRateMessage(UI& ui, float rate) {
 }
 
 
-int main(int ArgCount, char** Args)
+int main(int argc, char** argv)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO) != 0) {
         std::cerr << "Unable to initialize SDL" << std::endl;
         return 1;
     }
-    int framebuffer_w = 960;
-    int framebuffer_h = 540;
-    int window_w = 960;
-    int window_h = 540;
+    int framebufferW = 960;
+    int framebufferH = 540;
+    int windowW = 960;
+    int windowH = 540;
     unsigned WindowFlags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
@@ -50,7 +50,7 @@ int main(int ArgCount, char** Args)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetSwapInterval(1);
-    SDL_Window* window = SDL_CreateWindow("Orson's Scavenger Hunt - CS488 Project", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_w, window_h, WindowFlags);
+    SDL_Window* window = SDL_CreateWindow("Orson's Scavenger Hunt - CS488 Project", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, windowW, windowH, WindowFlags);
     assert(window);
     SDL_GLContext context = SDL_GL_CreateContext(window);
     int err = SDL_SetRelativeMouseMode(SDL_TRUE);
@@ -88,7 +88,7 @@ int main(int ArgCount, char** Args)
             float fps = 1.0f / frameTime;
             prevTimestamp = currTimestamp;
             ui.setFps(fps);
-            SDL_GetWindowSize(window, &window_w, &window_h);
+            SDL_GetWindowSize(window, &windowW, &windowH);
             SDL_Event e;
             while (SDL_PollEvent(&e)) {
                 if (e.type == SDL_KEYDOWN) {
@@ -165,8 +165,8 @@ int main(int ArgCount, char** Args)
                 else if (e.type == SDL_MOUSEMOTION) {
                     float dx = float(e.motion.xrel);
                     float dy = float(e.motion.yrel);
-                    scene.getCamera().m_yaw -= dx / float(window_w) * glm::radians(180.0f);
-                    scene.getCamera().m_pitch -= dy / float(window_h) * glm::radians(90.0f);
+                    scene.getCamera().m_yaw -= dx / float(windowW) * glm::radians(180.0f);
+                    scene.getCamera().m_pitch -= dy / float(windowH) * glm::radians(90.0f);
                 }
                 else if (e.type == SDL_MOUSEBUTTONUP) {
                     if (e.button.button == SDL_BUTTON_LEFT) {
@@ -226,14 +226,14 @@ int main(int ArgCount, char** Args)
             }
             scene.moveCamera(camDelta);
 
-            SDL_GL_GetDrawableSize(window, &framebuffer_w, &framebuffer_h);
-            glViewport(0, 0, framebuffer_w, framebuffer_h);
-            float aspectRatio = float(framebuffer_w) / float(framebuffer_h);
+            SDL_GL_GetDrawableSize(window, &framebufferW, &framebufferH);
+            glViewport(0, 0, framebufferW, framebufferH);
+            float aspectRatio = float(framebufferW) / float(framebufferH);
             scene.getCamera().m_aspect = aspectRatio;
-            scene.setFramebufferSize(framebuffer_w, framebuffer_h);
+            scene.setFramebufferSize(framebufferW, framebufferH);
             scene.tick(frameTime);
             ui.tick(frameTime);
-            ui.setFbSize(framebuffer_w, framebuffer_h);
+            ui.setFbSize(framebufferW, framebufferH);
 
             scene.render();
             ui.draw();
