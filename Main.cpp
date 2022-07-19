@@ -44,8 +44,8 @@ int main(int ArgCount, char** Args)
     SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    //SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -101,7 +101,7 @@ int main(int ArgCount, char** Args)
                         break;
                     case SDLK_f:
                         scene.getFlashlight().toggle();
-                        break; 
+                        break;
                     case SDLK_g:
                         ui.toggleShowHint();
                         break;
@@ -183,22 +183,22 @@ int main(int ArgCount, char** Args)
                 glm::vec3 right = dirs[0];
                 glm::vec3 up = dirs[1];
                 if (keystate[SDL_SCANCODE_W]) {
-                    camDelta += 0.03f * forward;
+                    camDelta += 3 * frameTime * forward;
                 }
                 if (keystate[SDL_SCANCODE_S]) {
-                    camDelta -= 0.03f * forward;
+                    camDelta -= 3 * frameTime * forward;
                 }
                 if (keystate[SDL_SCANCODE_A]) {
-                    camDelta -= 0.03f * right;
+                    camDelta -= 3 * frameTime * right;
                 }
                 if (keystate[SDL_SCANCODE_D]) {
-                    camDelta += 0.03f * right;
+                    camDelta += 3 * frameTime * right;
                 }
                 if (keystate[SDL_SCANCODE_E]) {
-                    camDelta += 0.03f * up;
+                    camDelta += 3 * frameTime * up;
                 }
                 if (keystate[SDL_SCANCODE_Q]) {
-                    camDelta -= 0.03f * up;
+                    camDelta -= 3 * frameTime * up;
                 }
                 if (!ui.getShowHint()) {
                     if (keystate[SDL_SCANCODE_RIGHT]) {
@@ -225,7 +225,7 @@ int main(int ArgCount, char** Args)
             scene.tick(frameTime);
             ui.tick(frameTime);
             ui.setFbSize(framebuffer_w, framebuffer_h);
-            
+
             scene.render();
             ui.draw();
 
