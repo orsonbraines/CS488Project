@@ -34,6 +34,9 @@ public:
 	Camera& getCamera() { return m_cam; }
 	Sun& getSun() { return m_sun; }
 	void toggleBinoMode() { m_binoMode = !m_binoMode; }
+	void toggleReflection() { m_reflectionEnabled = !m_reflectionEnabled; }
+	void toggleShadow() { m_shadowEnabled = !m_shadowEnabled; }
+	void toggleBumpmap() { m_bumpmapEnabled = !m_bumpmapEnabled; }
 	void changeFocusDistance(float delta);
 	float getFocusDistance() { return m_binoFocusDist; }
 	void setFramebufferSize(uint fboW, uint fboH) {
@@ -57,6 +60,9 @@ private:
 	glm::mat4 getReflectionMatrix() const; // reflection about xz plane at given y
 
 	bool m_binoMode;
+	bool m_reflectionEnabled,
+		m_shadowEnabled,
+		m_bumpmapEnabled;
 	uint m_defaultFboW, m_defaultFboH;
 	Camera m_cam;
 	Sun m_sun;

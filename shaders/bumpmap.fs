@@ -30,6 +30,8 @@ uniform vec3 Kd;
 uniform vec3 Ks;
 uniform float Ns;
 
+uniform float bumpScale;
+
 float shadowRatio(sampler2D shadow, vec4 lightSpacePos, float shadowBias) {
 	// perspective divide and map to [0,1]
 	vec3 projectedLightPos = (lightSpacePos.xyz / lightSpacePos.w) * 0.5 + 0.5;
@@ -82,9 +84,9 @@ void main() {
 	vec3 colour = ambientColour * Kd;
 	vec3 n = normalize(fs_normal);
 
-	float dhdu = (texture(heightfield, fs_uv + vec2(0.01, 0)).r - texture(heightfield, fs_uv - vec2(0.01, 0)).r) * 3.0;
-	float dhdv = (texture(heightfield, fs_uv + vec2(0, 0.01)).r - texture(heightfield, fs_uv - vec2(0, 0.01)).r) * 3.0;
-	n = normalize(n - dhdu * normalize(fs_udir) - dhdv * normalize(fs_vdir));
+	float dhdu = texture(heightfield, fs_uv + vec2(0.01, 0)).r - texture(heightfield, fs_uv - vec2(0.01, 0)).r;
+	float dhdv = texture(heightfield, fs_uv + vec2(0, 0.01)).r - texture(heightfield, fs_uv - vec2(0, 0.01)).r;
+	n = normalize(n - bumpScale * dhdu * normalize(fs_udir) - bumpScale * dhdv * normalize(fs_vdir));
 
 	colour += sunShade(n);
 	colour += flShade(n);

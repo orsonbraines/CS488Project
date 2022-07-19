@@ -147,6 +147,15 @@ int main(int ArgCount, char** Args)
                             ui.changeHint(true);
                         }
                         break;
+                    case SDLK_1:
+                        scene.toggleReflection();
+                        break;
+                    case SDLK_2:
+                        scene.toggleShadow();
+                        break;
+                    case SDLK_3:
+                        scene.toggleBumpmap();
+                        break;
                     }
                 }
                 else if (e.type == SDL_QUIT)

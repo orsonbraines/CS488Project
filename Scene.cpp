@@ -10,6 +10,9 @@ Scene::Scene(AudioDevice &audioDevice) :
     m_audioDevice(audioDevice),
     m_collideSound("sounds/collide.wav"),
     m_timeSinceLastSound(10.0f),
+    m_reflectionEnabled(true),
+    m_shadowEnabled(true),
+    m_bumpmapEnabled(true),
     m_flashlight(m_cam),
     m_textureKdProg("shaders/textureKd.vs", "shaders/textureKd.fs"),
     m_constantKdProg("shaders/constantKd.vs", "shaders/constantKd.fs"),
@@ -247,12 +250,16 @@ void Scene::render() {
     glBindFramebuffer(GL_FRAMEBUFFER, m_sunShadowMapFbo);
     glViewport(0, 0, m_sunShadowTextureSize, m_sunShadowTextureSize);
     glClear(GL_DEPTH_BUFFER_BIT);
-    renderObjects(m_sun.getP(), m_sun.getV(m_cam.m_pos), RenderType::Shadow, 1.0f);
+    if (m_shadowEnabled) {
+        renderObjects(m_sun.getP(), m_sun.getV(m_cam.m_pos), RenderType::Shadow, 1.0f);
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, m_flShadowMapFbo);
     glViewport(0, 0, m_flShadowTextureSize, m_flShadowTextureSize);
     glClear(GL_DEPTH_BUFFER_BIT);
-    renderObjects(m_flashlight.getP(), m_flashlight.getV(), RenderType::Shadow, 1.0f);
+    if (m_shadowEnabled) {
+        renderObjects(m_flashlight.getP(), m_flashlight.getV(), RenderType::Shadow, 1.0f);
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFbo);
     glViewport(0, 0, m_sceneWidth, m_sceneHeight);
@@ -292,39 +299,41 @@ void Scene::render() {
     renderSmoke(m_cam.getP(), m_cam.getV());
     glDepthMask(GL_TRUE);
 
-    // draw the objects reflected about the water plane
-    glBindFramebuffer(GL_FRAMEBUFFER, m_reflectedFbo);
-    glViewport(0,0,m_sceneWidth,m_sceneHeight);
-    glDisable(GL_STENCIL_TEST);
-    glDisable(GL_BLEND);
-    glEnable(GL_CLIP_DISTANCE0);
-    glCullFace(GL_FRONT); // the faces will reverse direction when reflected
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-    renderObjects(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), RenderType::Normal, 0.3f);
-    renderGround(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.3f);
-    renderLeaves(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.3f);
-    glDisable(GL_CLIP_DISTANCE0);
-    glCullFace(GL_BACK);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    if (m_reflectionEnabled) {
+        // draw the objects reflected about the water plane
+        glBindFramebuffer(GL_FRAMEBUFFER, m_reflectedFbo);
+        glViewport(0, 0, m_sceneWidth, m_sceneHeight);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_BLEND);
+        glEnable(GL_CLIP_DISTANCE0);
+        glCullFace(GL_FRONT); // the faces will reverse direction when reflected
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+        renderObjects(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), RenderType::Normal, 0.3f);
+        renderGround(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.3f);
+        renderLeaves(m_cam.getP(), m_cam.getV() * getReflectionMatrix(), 0.3f);
+        glDisable(GL_CLIP_DISTANCE0);
+        glCullFace(GL_BACK);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    // blend the reflections into the water
-    glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFbo);
-    glViewport(0, 0, m_sceneWidth, m_sceneHeight);
-    glEnable(GL_STENCIL_TEST);
-    glEnable(GL_BLEND);
-    glDisable(GL_DEPTH_TEST);
-    glStencilFunc(GL_LEQUAL, 1, 0xff);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-    m_colourTextureProg.use();
-    glBindVertexArray(m_alphatVao);
-    glActiveTexture(GL_TEXTURE0);
-    m_texReflectedScene.bind();
-    glUniform1i(m_colourTextureProg["sampler"], 0);
-    glm::mat3 I(1.0f);
-    glUniformMatrix3fv(m_colourTextureProg["M"], 1, GL_FALSE, glm::value_ptr(I));
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    glBindVertexArray(0);
+        // blend the reflections into the water
+        glBindFramebuffer(GL_FRAMEBUFFER, m_sceneFbo);
+        glViewport(0, 0, m_sceneWidth, m_sceneHeight);
+        glEnable(GL_STENCIL_TEST);
+        glEnable(GL_BLEND);
+        glDisable(GL_DEPTH_TEST);
+        glStencilFunc(GL_LEQUAL, 1, 0xff);
+        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+        m_colourTextureProg.use();
+        glBindVertexArray(m_alphatVao);
+        glActiveTexture(GL_TEXTURE0);
+        m_texReflectedScene.bind();
+        glUniform1i(m_colourTextureProg["sampler"], 0);
+        glm::mat3 I(1.0f);
+        glUniformMatrix3fv(m_colourTextureProg["M"], 1, GL_FALSE, glm::value_ptr(I));
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glBindVertexArray(0);
+    }
 
     if (m_binoMode) {
         //apply the blur
@@ -510,6 +519,7 @@ void Scene::renderObjects(const glm::mat4& P, const glm::mat4& V, RenderType ren
     else {
         m_bumpmapProg.use();
         glUniform1f(m_bumpmapProg["u_alpha"], alpha);
+        glUniform1f(m_bumpmapProg["bumpScale"], m_bumpmapEnabled ? 1.6f : 0.0f);
         setCommonUniforms(m_bumpmapProg);
         glActiveTexture(GL_TEXTURE0);
         m_texSunShadowMap.bind();
