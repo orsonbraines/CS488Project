@@ -55,7 +55,7 @@ This project is built with cmake. It depends on SDL2, glm, and glew.
 - Download and extract the latest versions of SLD2, glm, and glew
 - For each of the libraries, add a cmake conifg file setting the paths to the libraries and header files (SDL2_INCLUDE_DIRS, SDL2_LIBRARIES, etc.)
 - Open the project folder in Visual Studio
-- Add ad or modify the variables in CMakeSettings.json (SDL2_DIR, GLM_DIR, and GLEW_DIR) to point to where the libraries are installed
+- Add or modify the variables in CMakeSettings.json (SDL2_DIR, GLM_DIR, and GLEW_DIR) to point to where the libraries are installed
 - Before running, ensure SDL2.dll is on the system path
 
 ## Linux (Ubuntu)
